@@ -1,0 +1,31 @@
+// Existing uploaded thumbnails. Match by URL so edited uploads use their new image.
+const catalogueImages = <String, String>{
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2F9B6z1Ug4M0cKpQbze0VP%2Fmain.webp?alt=media&token=191e25a9-e88a-4565-8756-48396bbd57b3':
+      'assets/catalogue/9B6z1Ug4M0cKpQbze0VP.webp',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FBhqneDkCEBDIqCPKKXxM%2Fmain.jpg?alt=media&token=8d27d6e3-05d3-4848-8633-2c5087747a68':
+      'assets/catalogue/BhqneDkCEBDIqCPKKXxM.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FJFNqsWT9yi8Eyhe2D8R7%2Fmain.jpg?alt=media&token=667dc0b9-725e-43c1-97ca-d186df0a7038':
+      'assets/catalogue/JFNqsWT9yi8Eyhe2D8R7.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FJT03pTy5QauXFTZME5As%2Fmain.jpg?alt=media&token=0299b380-c9cd-4345-96c7-c60f9a417f52':
+      'assets/catalogue/JT03pTy5QauXFTZME5As.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FLnOTGjh5KPoQcFkTIpNB%2Fmain.webp?alt=media&token=c55f1506-386a-440d-b6a2-3d9c2ea6443c':
+      'assets/catalogue/LnOTGjh5KPoQcFkTIpNB.webp',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FQaMbzkbktVlbzseqUewj%2Fmain.jpg?alt=media&token=e585f4f7-7178-44a7-b8dd-1626ede3e618':
+      'assets/catalogue/QaMbzkbktVlbzseqUewj.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FRT7VmocFRDNpVPQnwupI%2Fmain.jpg?alt=media&token=f7c20218-4828-478b-ac4b-82e9b4ab54c9':
+      'assets/catalogue/RT7VmocFRDNpVPQnwupI.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FgnT5suONDyTxgUOZMzN0%2Fmain.png?alt=media&token=67cc4a03-6c7b-49fd-8e63-e8eae6ab7d86':
+      'assets/catalogue/gnT5suONDyTxgUOZMzN0.png',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FhzjZL5csAFHEuMEvGFZJ%2Fmain.jpg?alt=media&token=f0ccc9f2-49da-4ba1-b295-773eb72af76d':
+      'assets/catalogue/hzjZL5csAFHEuMEvGFZJ.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FqekRfa17JkvgXKHjW0aa%2Fmain.webp?alt=media&token=daff2d0c-f5c2-4d48-beec-20e22f67010a':
+      'assets/catalogue/qekRfa17JkvgXKHjW0aa.webp',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FsUk4H3kXEFlgR1J5jw5C%2Fmain.jpg?alt=media&token=5eca4021-6318-4e97-bbd5-bd49ca131644':
+      'assets/catalogue/sUk4H3kXEFlgR1J5jw5C.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2Fsb1vT7ZREcjGZm3Hbd9o%2Fmain.jpg?alt=media&token=41bcf1c3-4555-4336-8ad6-99159df9e538':
+      'assets/catalogue/sb1vT7ZREcjGZm3Hbd9o.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FuDuzV0LFV5JDIsZayeUD%2Fmain.jpg?alt=media&token=a5be2d69-c3e0-4a92-b94a-18fc9919c927':
+      'assets/catalogue/uDuzV0LFV5JDIsZayeUD.jpg',
+  'https://firebasestorage.googleapis.com/v0/b/vto-with-nano.firebasestorage.app/o/outfits%2FyFgnyyzIfmhn6NJr5ILE%2Fmain.webp?alt=media&token=d3a54d91-d7ef-446e-ac0d-8afbb1935f23':
+      'assets/catalogue/yFgnyyzIfmhn6NJr5ILE.webp',
+};

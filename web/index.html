@@ -17,7 +17,6 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#170635">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
@@ -62,6 +61,15 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- Resolve FlutterFire and transitive SDK imports locally. Keep the version
+       aligned with flutterfire_web_sdk_version in flutter_bootstrap.js. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "https://www.gstatic.com/firebasejs/12.18.0/": "./firebasejs/12.18.0/"
+      }
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

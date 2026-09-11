@@ -2,14 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Digiwearit utilise la photo que vous choisissez pour créer votre essayage virtuel.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Digiwearit uses the camera to preview outfits on you in real time.</string>
+	<string>Digiwearit utilise la caméra pour prendre votre photo et créer votre essayage virtuel.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Digiwearit2</string>
+	<string>Digiwearit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
