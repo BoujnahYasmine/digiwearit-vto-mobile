@@ -20,7 +20,7 @@ void main() {
             ]),
           ),
           routes: {
-            '/model': (context) {
+            '/try-on': (context) {
               result =
                   ModalRoute.of(context)!.settings.arguments as OutfitSelection;
               return const Scaffold();
@@ -33,6 +33,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('outfit-continue')));
       await tester.pumpAndSettle();
       expect(result!.outfits.length, 2);
+      expect(result!.outfit.id, 'a');
       expect(tester.takeException(), isNull);
     });
   }

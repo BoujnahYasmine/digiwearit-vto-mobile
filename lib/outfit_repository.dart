@@ -38,7 +38,8 @@ class OutfitRepository {
         (o) =>
             o.active &&
             normalizedGender(o.gender) == normalizedGender(gender) &&
-            normalizedStyle(outfitStyle(o)) == normalizedStyle(style) &&
+            (normalizedStyle(outfitStyle(o)) == normalizedStyle(style) ||
+                normalizedStyle(o.category) == normalizedStyle(style)) &&
             (category == null ||
                 outfitType(o) == category ||
                 o.categoryId == category),
@@ -58,12 +59,16 @@ class OutfitRepository {
     gender: gender,
     style: style,
   ).map((items) => {for (final o in items) outfitType(o): o}.values.toList());
-  Future<Outfit?> getOutfitById(String id) async {
+  Future<Outfit?> getOutfitById(String id, {bool fromServer = false}) async {
     await FirebaseStartup.ensureReady();
     final doc = await FirebaseFirestore.instance
         .collection('outfits')
         .doc(id)
-        .get();
+        .get(
+          GetOptions(
+            source: fromServer ? Source.server : Source.serverAndCache,
+          ),
+        );
     return doc.exists ? Outfit.fromFirestore(doc.id, doc.data()!) : null;
   }
 }

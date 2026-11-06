@@ -1,7 +1,6 @@
 import 'try_on_session.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'experience_session.dart';
 import 'mobile_layout.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -12,12 +11,13 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   bool english = false;
-  void open(bool partner) {
+  void open({required bool partner}) {
+    // Any mode entry starts from a clean try-on state: no customer media,
+    // generation or payment state survives a mode switch.
     TryOnSession.current.reset();
-    if (!partner) ExperienceSession.personal();
     Navigator.pushNamed(
       context,
-      partner ? '/partner' : '/universe',
+      partner ? '/mirror' : '/universe',
       arguments: english,
     );
   }
@@ -332,10 +332,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     ),
     child: TextButton(
       key: ValueKey(partner ? 'partner-start' : 'personal-start'),
-      onPressed: () => open(partner),
+      onPressed: () => open(partner: partner),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        minimumSize: const Size(0, 54),
+        padding: EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: MediaQuery.sizeOf(context).height < 650 ? 9 : 14,
+        ),
+        minimumSize: Size(0, MediaQuery.sizeOf(context).height < 650 ? 46 : 54),
         foregroundColor: partner ? digiInk : Colors.white,
       ),
       child: Row(

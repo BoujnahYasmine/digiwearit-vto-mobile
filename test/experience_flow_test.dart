@@ -1,27 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:digiwearit2/experience_session.dart';
+import 'package:digiwearit2/try_on_session.dart';
 import 'package:digiwearit2/experience_failure.dart';
 import 'package:digiwearit2/result_screen.dart';
 import 'package:digiwearit2/rating_sheet.dart';
 import 'fixtures.dart';
 
 void main() {
-  test('gate supports both orders and failed payments', () {
-    final gate = RevealGate(covered: false);
+  test('gate requires completed generation and successful payment', () {
+    final gate = RevealGate();
     gate.generation = GenerationStatus.completed;
     expect(gate.canReveal, isFalse);
     gate.payment = PaymentStatus.failed;
     expect(gate.canReveal, isFalse);
-    gate.payment = PaymentStatus.demoPaid;
+    gate.payment = PaymentStatus.paid;
     expect(gate.canReveal, isTrue);
     gate.generation = GenerationStatus.processing;
     expect(gate.canReveal, isFalse);
-    final shop = RevealGate(covered: true);
-    shop.generation = GenerationStatus.completed;
-    expect(shop.canReveal, isTrue);
-    expect(explainFailure(TimeoutException('x')), contains('connexion'));
+    expect(explainFailure(TimeoutException('x')), Friendly.slow);
   });
   testWidgets(
     'email retries then rating can be skipped and finish clears routes',
@@ -62,7 +59,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('email-action')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('trop de temps'), findsOneWidget);
+      expect(find.text(Friendly.slow), findsOneWidget);
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('email-action')));
       await tester.pumpAndSettle();

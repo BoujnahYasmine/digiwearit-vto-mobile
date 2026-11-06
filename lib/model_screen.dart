@@ -1,9 +1,9 @@
 import 'try_on_session.dart';
 import 'package:flutter/material.dart';
+import 'store_payment.dart';
 import 'catalogue_photo.dart';
 import 'outfit.dart';
 import 'outfit_selection.dart';
-import 'experience_session.dart';
 import 'mobile_layout.dart';
 
 class ModelScreen extends StatefulWidget {
@@ -490,10 +490,10 @@ class _ModelScreenState extends State<ModelScreen> {
                                   ),
                                 ),
                               Text(
-                                ExperienceSession.covered
+                                StorePayment.supported
                                     ? t(
-                                        'Inclus dans votre abonnement',
-                                        'Included in your subscription',
+                                        'Essayage IA · 29 DH',
+                                        'AI try-on · 29 DH',
                                       )
                                     : t(
                                         'Essayage IA · 29 DH · Démo, aucun débit',

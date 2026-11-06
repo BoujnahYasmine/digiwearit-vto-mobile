@@ -50,9 +50,15 @@ void main() {
             scale: scale,
           ),
         );
+        await tester.runAsync(
+          () => precacheImage(
+            MemoryImage(bytes),
+            tester.element(find.byType(ResultScreen)),
+          ),
+        );
         await tester.pumpAndSettle();
         visible(tester, find.byKey(const ValueKey('result-email')));
-        expect(find.byType(SingleChildScrollView), findsNothing);
+        expect(find.byKey(const ValueKey('result-sheet')), findsOneWidget);
         expect(find.text('Télécharger'), findsNothing);
         expect(find.byIcon(Icons.favorite_border), findsNothing);
         expect(
@@ -60,6 +66,12 @@ void main() {
           BoxFit.contain,
         );
         await tester.tap(find.byKey(const ValueKey('result-email')));
+        await tester.runAsync(
+          () => precacheImage(
+            MemoryImage(bytes),
+            tester.element(find.byType(ResultScreen)),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(find.byType(DeliverySheet), findsOneWidget);
         expect(find.byType(ResultScreen), findsOneWidget);

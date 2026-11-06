@@ -5,6 +5,29 @@ import 'package:digiwearit2/style_selection.dart';
 import 'fixtures.dart';
 
 void main() {
+  testWidgets(
+    'partner selection uses its callback instead of the public style route',
+    (tester) async {
+      String? gender;
+      bool? english;
+      await tester.pumpWidget(
+        app(
+          UniverseScreen(
+            onSelected: (selected, language) {
+              gender = selected;
+              english = language;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('universe-femme')));
+      await tester.pumpAndSettle();
+      expect(gender, 'femme');
+      expect(english, false);
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final size in phones) {
     testWidgets('gender action visible and selection carried at $size', (
       tester,

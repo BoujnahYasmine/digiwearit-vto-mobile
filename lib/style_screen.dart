@@ -1,10 +1,19 @@
+import 'dart:async';
+import 'outfit.dart';
+import 'outfit_repository.dart';
+import 'outfit_selection.dart';
 import 'try_on_session.dart';
 import 'package:flutter/material.dart';
 import 'mobile_layout.dart';
 import 'style_selection.dart';
 
 class StyleScreen extends StatefulWidget {
-  const StyleScreen({super.key, this.selection = const StyleSelection()});
+  const StyleScreen({
+    super.key,
+    this.selection = const StyleSelection(),
+    this.catalogues,
+  });
+  final Stream<List<LookCategory>>? catalogues;
   final StyleSelection selection;
   @override
   State<StyleScreen> createState() => _StyleScreenState();
@@ -14,7 +23,7 @@ class _StyleScreenState extends State<StyleScreen> {
   late bool english = widget.selection.english;
   late String selected = widget.selection.style;
   // Keep catalogue identifiers stable; the displayed French label is Indien.
-  static const styles = [
+  static const defaults = [
     (
       'Marocain',
       'Moroccan',
@@ -48,6 +57,66 @@ class _StyleScreenState extends State<StyleScreen> {
       Icons.work_outline,
     ),
   ];
+
+  late List<(String, String, String, String, String, IconData)> styles = [
+    ...defaults,
+  ];
+  StreamSubscription<List<LookCategory>>? _subscription;
+  @override
+  void initState() {
+    super.initState();
+    _subscription = (widget.catalogues ?? OutfitRepository().watchStyles())
+        .listen(
+          (items) {
+            final merged = [...defaults];
+            for (final item in items.where(
+              (item) => item.active && item.name.isNotEmpty,
+            )) {
+              final index = merged.indexWhere(
+                (entry) =>
+                    normalizedStyle(entry.$1) == normalizedStyle(item.name),
+              );
+              if (index >= 0) {
+                final old = merged[index];
+                merged[index] = (
+                  old.$1,
+                  old.$2,
+                  item.imageUrl.isEmpty ? old.$3 : item.imageUrl,
+                  item.description.isEmpty ? old.$4 : item.description,
+                  item.description.isEmpty ? old.$5 : item.description,
+                  old.$6,
+                );
+              } else {
+                merged.add((
+                  item.name,
+                  item.name,
+                  item.imageUrl.isEmpty
+                      ? 'assets/welcome_boutique.png'
+                      : item.imageUrl,
+                  item.description,
+                  item.description,
+                  Icons.checkroom_outlined,
+                ));
+              }
+            }
+            if (!mounted) return;
+            setState(() {
+              styles = merged;
+              if (!styles.any((item) => item.$1 == selected))
+                selected = styles.first.$1;
+            });
+          },
+          onError: (Object error) {
+            // Existing categories remain available if the catalogue cannot load.
+          },
+        );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
 
   void next() {
     TryOnSession.current.selectStyle(selected);
@@ -217,29 +286,22 @@ class _StyleScreenState extends State<StyleScreen> {
                         ),
                         SizedBox(height: gap),
                         Expanded(
-                          child: Column(
-                            children: [
-                              for (var row = 0; row < 2; row++) ...[
-                                if (row > 0) SizedBox(height: gap),
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: _card(row * 2, wide, compact),
-                                      ),
-                                      SizedBox(width: gap),
-                                      Expanded(
-                                        child: _card(
-                                          row * 2 + 1,
-                                          wide,
-                                          compact,
-                                        ),
-                                      ),
-                                    ],
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => GridView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: styles.length,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: gap,
+                                    mainAxisSpacing: gap,
+                                    mainAxisExtent:
+                                        ((constraints.maxHeight - gap) / 2)
+                                            .clamp(140.0, 420.0),
                                   ),
-                                ),
-                              ],
-                            ],
+                              itemBuilder: (context, index) =>
+                                  _card(index, wide, compact),
+                            ),
                           ),
                         ),
                         SizedBox(height: gap),
@@ -350,13 +412,24 @@ class _StyleScreenState extends State<StyleScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  index == 0 && widget.selection.gender == 'homme'
-                      ? 'assets/universe_homme.png'
-                      : item.$3,
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(0, -.35),
-                ),
+                if (item.$3.startsWith('https://') ||
+                    item.$3.startsWith('http://'))
+                  Image.network(
+                    item.$3,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, error, stack) => Image.asset(
+                      'assets/welcome_boutique.png',
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else
+                  Image.asset(
+                    index == 0 && widget.selection.gender == 'homme'
+                        ? 'assets/universe_homme.png'
+                        : item.$3,
+                    fit: BoxFit.cover,
+                    alignment: const Alignment(0, -.35),
+                  ),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

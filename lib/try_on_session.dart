@@ -1,12 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'outfit.dart';
 import 'outfit_selection.dart';
-import 'experience_session.dart';
 import 'nano_banana_service.dart';
 import 'try_on_request.dart';
 import 'digiwearit_watermark.dart';
 
 enum TryOnStatus { idle, processing, completed, failed }
+
+enum GenerationStatus { processing, completed, failed }
+
+enum PaymentStatus { pending, processing, paid, failed }
+
+/// Reveal gate of the public try-on: a customer sees the result only once the
+/// generation completed AND the payment (store or demo) succeeded.
+class RevealGate {
+  PaymentStatus payment = PaymentStatus.pending;
+  GenerationStatus generation = GenerationStatus.processing;
+  bool get canReveal =>
+      generation == GenerationStatus.completed && payment == PaymentStatus.paid;
+}
 
 class TryOnSession extends ChangeNotifier {
   TryOnSession({
@@ -29,12 +41,9 @@ class TryOnSession extends ChangeNotifier {
   int _epoch = 0;
   Future<void>? _pending;
   String? requestId;
-  String get userType => ExperienceSession.covered ? 'partner' : 'personal';
   String? get outfitId => outfit?.id;
-  bool get covered => payment == PaymentStatus.covered;
   bool get canReveal =>
-      status == TryOnStatus.completed &&
-      (payment == PaymentStatus.demoPaid || covered);
+      status == TryOnStatus.completed && payment == PaymentStatus.paid;
   void selectGender(String value) {
     reset();
     gender = value;
@@ -76,9 +85,7 @@ class TryOnSession extends ChangeNotifier {
     reset();
     selectOutfit(value);
     capturedPhoto = photo;
-    payment = ExperienceSession.covered
-        ? PaymentStatus.covered
-        : PaymentStatus.pending;
+    payment = PaymentStatus.pending;
     requestId = DateTime.now().microsecondsSinceEpoch.toString();
     notifyListeners();
   }

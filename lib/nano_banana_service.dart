@@ -1,5 +1,7 @@
-import 'dart:typed_data';
+import 'dart:async';
+import 'classic_tryon_analytics.dart';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:http/http.dart' as http;
 import 'try_on_request.dart';
@@ -67,30 +69,58 @@ class NanoBananaService {
     TryOnRequest request, {
     void Function(int)? onStage,
   }) async {
-    final ai = FirebaseAI.agentPlatform(location: 'global');
-    final model = ai.generativeModel(
-      model: 'gemini-3.1-flash-image',
-      generationConfig: GenerationConfig(
-        responseModalities: [ResponseModalities.text, ResponseModalities.image],
-      ),
-    );
-    onStage?.call(1);
-    final response = await model
-        .generateContent([Content.multi(await buildInput(request))])
-        .timeout(const Duration(minutes: 2));
-    if (response.inlineDataParts.isEmpty) {
-      throw Exception(
-        "Digiwearit AI n'a retourn\u00e9 aucune image. R\u00e9essayez avec une photo plus nette.",
+    final timer = Stopwatch()..start();
+    var succeeded = false;
+    try {
+      final ai = FirebaseAI.agentPlatform(location: 'global');
+      final model = ai.generativeModel(
+        model: 'gemini-3.1-flash-image',
+        generationConfig: GenerationConfig(
+          responseModalities: [
+            ResponseModalities.text,
+            ResponseModalities.image,
+          ],
+        ),
+      );
+      onStage?.call(1);
+      final response = await model
+          .generateContent([Content.multi(await buildInput(request))])
+          .timeout(const Duration(minutes: 2));
+      if (response.inlineDataParts.isEmpty) {
+        throw Exception(
+          "Digiwearit AI n'a retourn\u00e9 aucune image. R\u00e9essayez avec une photo plus nette.",
+        );
+      }
+      final codec = await instantiateImageCodec(
+        response.inlineDataParts.first.bytes,
+      );
+      final frame = await codec.getNextFrame();
+      if (kDebugMode) {
+        debugPrint(
+          'Digiwearit generated pixels: ${frame.image.width}x${frame.image.height}',
+        );
+      }
+      frame.image.dispose();
+      codec.dispose();
+
+      succeeded = true;
+      return response.inlineDataParts.map((part) => part.bytes).toList();
+    } finally {
+      timer.stop();
+      await recordClassicTryOn(
+        outfitId: request.outfit.id,
+        outfitName: request.lookName,
+        succeeded: succeeded,
+        durationMs: timer.elapsedMilliseconds,
+      ).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          debugPrint(
+            "Classic statistics save is still pending in the background.",
+          );
+        },
       );
     }
-    final codec = await instantiateImageCodec(
-      response.inlineDataParts.first.bytes,
-    );
-    final frame = await codec.getNextFrame();
-    frame.image.dispose();
-    codec.dispose();
-
-    return response.inlineDataParts.map((part) => part.bytes).toList();
   }
 
   static Future<Part> _imagePartFromUrl(String url) async {

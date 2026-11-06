@@ -1,4 +1,5 @@
 // ignore_for_file: depend_on_referenced_packages
+import 'package:digiwearit2/experience_failure.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,7 +47,7 @@ void main() {
         findsNothing,
       );
       expect(find.text('Prendre la photo'), findsNothing);
-      expect(find.textContaining('Caméra indisponible'), findsOneWidget);
+      expect(find.text(Friendly.cameraUnavailable), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

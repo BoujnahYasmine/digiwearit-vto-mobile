@@ -1,8 +1,12 @@
+import 'experience_failure.dart';
+import 'face_smoothing.dart';
 import 'mobile_layout.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'beauty_filter.dart';
+import 'photo_check.dart';
 import 'camera_service.dart';
 import 'outfit_selection.dart';
 import 'photo_review_screen.dart';
@@ -11,11 +15,17 @@ import 'package:flutter/foundation.dart';
 class PhotoScreen extends StatefulWidget {
   const PhotoScreen({
     super.key,
-    required this.selection,
     required this.onContinue,
+    this.selection,
+    this.english,
     this.initializeCamera = true,
+    this.makeup = false,
   });
-  final OutfitSelection selection;
+  final OutfitSelection? selection;
+
+  /// Adds blush and a sheer lipstick to the beauty look; femme journeys only.
+  final bool makeup;
+  final bool? english;
   final Future<void> Function(BuildContext, Uint8List) onContinue;
   final bool initializeCamera;
   @override
@@ -24,6 +34,62 @@ class PhotoScreen extends StatefulWidget {
 
 class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   final _cameraService = CameraService();
+  final _faceSmoothing = FaceSmoothing();
+  double _smoothing = 0;
+
+  bool _filterLoading = false;
+  int _filterEpoch = 0;
+
+  /// The built-in beauty look, always on with no customer choice: the
+  /// "Éclat" light on every camera shot, plus on phones (face detection)
+  /// smoothing and a light foundation, with blush and lips for femme journeys.
+  static const _beautyLevel = .5;
+  Future<void> _stopFilter() {
+    ++_filterEpoch;
+    _smoothing = 0;
+    _filterLoading = false;
+    _faceSmoothing.setMakeup(foundation: false, color: false);
+    return _faceSmoothing.stop();
+  }
+
+  Future<void> _setSmoothing(double value, {bool auto = false}) async {
+    if (_busy || _countdown > 0 || _filterLoading) return;
+    _faceSmoothing.setMakeup(
+      foundation: value == _beautyLevel,
+      color: widget.makeup && value == _beautyLevel,
+    );
+    if (value == 0) {
+      await _stopFilter();
+      if (mounted) setState(() {});
+      return;
+    }
+    if (_smoothing > 0) {
+      _faceSmoothing.setStrength(value);
+      setState(() => _smoothing = value);
+      return;
+    }
+    final epoch = ++_filterEpoch;
+    setState(() => _filterLoading = true);
+    final ready = await _faceSmoothing.start(value);
+    if (!mounted || epoch != _filterEpoch) return;
+    setState(() {
+      _filterLoading = false;
+      _smoothing = ready ? value : 0;
+    });
+    if (!ready && !auto) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            t(
+              'Lissage indisponible. La photo originale est conserv\u00e9e.',
+              'Smoothing unavailable. Your original photo is preserved.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   CameraController? _camera;
   List<CameraDescription> _devices = [];
   int _device = 0;
@@ -31,7 +97,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   Timer? _countdownTimer;
   int _countdown = 0;
   bool _loading = false, _busy = false;
-  late bool _english = widget.selection.english;
+  late bool _english = widget.english ?? widget.selection?.english ?? false;
   String? _error;
   Uint8List? _photo;
   String t(String fr, String en) => _english ? en : fr;
@@ -46,6 +112,8 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   Future<void> _start({bool switchLens = false}) async {
     _cancelCountdown();
     final epoch = ++_epoch;
+    await _stopFilter();
+    if (!mounted || epoch != _epoch) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -54,7 +122,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
     try {
       final previous = _camera;
       setState(() => _camera = null);
-      await previous?.dispose();
+      await _release(previous);
       if (_devices.isEmpty) {
         _devices = await _cameraService.devices();
         final front = _devices.indexWhere(
@@ -66,18 +134,21 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
       }
       if (!mounted || epoch != _epoch) return;
       if (_devices.isEmpty) throw CameraException('no-camera', 'No camera');
-      next = _cameraService.controller(_devices[_device]);
-      await _cameraService.initialize(next);
+      next = await _cameraService.open(_devices[_device], release: _release);
       if (!mounted || epoch != _epoch) {
-        await next.dispose();
+        await _release(next);
         return;
       }
+      _faceSmoothing.bind(next);
       setState(() {
         _camera = next;
         _loading = false;
       });
+      if (_faceSmoothing.makeupSupported) {
+        unawaited(_setSmoothing(_beautyLevel, auto: true));
+      }
     } catch (failure) {
-      await next?.dispose();
+      await _release(next);
       if (mounted && epoch == _epoch) {
         setState(() {
           _loading = false;
@@ -85,15 +156,26 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
               failure is CameraException &&
                   failure.code.toLowerCase().contains('denied')
               ? t(
-                  'Accès caméra refusé. Autorisez la caméra dans les réglages du navigateur ou du téléphone, puis réessayez.',
-                  'Camera permission denied. Allow camera access in browser or phone settings, then retry.',
+                  Friendly.cameraDenied,
+                  'To take your photo, allow the camera in your settings, then come back here 📷',
                 )
               : t(
-                  'Caméra indisponible. Autorisez son accès ou choisissez une photo dans la galerie.',
-                  'Camera unavailable. Allow access or choose a photo from your gallery.',
+                  Friendly.cameraUnavailable,
+                  'The camera isn’t responding right now 📷 Try again, or pick a photo from your gallery.',
                 );
         });
       }
+    }
+  }
+
+  /// Disposes a camera that may never have finished initializing: CameraX
+  /// throws when releasing a preview it never created (e.g. while the
+  /// permission prompt interrupted startup), which must not crash the screen.
+  static Future<void> _release(CameraController? camera) async {
+    try {
+      await camera?.dispose();
+    } catch (error) {
+      debugPrint('Camera release ignored: $error');
     }
   }
 
@@ -104,7 +186,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _beginCapture() async {
-    if (_busy || _loading || _countdown > 0) return;
+    if (_busy || _loading || _filterLoading || _countdown > 0) return;
     if (_camera?.value.isInitialized != true) {
       await _start();
       return;
@@ -133,11 +215,38 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
     }
     setState(() => _busy = true);
     try {
-      final file = gallery
-          ? await _cameraService.pickPhoto()
-          : await _cameraService.capture(_camera!);
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
+      Uint8List bytes;
+      if (!gallery && _smoothing > 0) {
+        try {
+          bytes = await _faceSmoothing.capture();
+        } catch (error) {
+          // The beauty look is automatic, so a plain photo is taken quietly.
+          debugPrint('Beauty capture skipped: $error');
+          await _stopFilter();
+          bytes = await _cameraService.captureBytes(_camera!);
+        }
+      } else if (gallery) {
+        final file = await _cameraService.pickPhoto();
+        if (file == null) return;
+        bytes = await _cameraService.normalizedBytes(file);
+      } else {
+        bytes = await _cameraService.captureBytes(_camera!);
+      }
+      // Automatic light and camera-quality check, before Éclat brightens it.
+      PhotoCheck? check;
+      try {
+        check = await compute(checkPhoto, bytes);
+      } catch (error) {
+        debugPrint('Photo check skipped: $error');
+      }
+      if (!gallery) {
+        try {
+          bytes = await compute(BeautyFilter.apply, bytes);
+        } catch (error) {
+          debugPrint('Éclat filter skipped: $error');
+        }
+      }
+      await _stopFilter();
       if (!mounted) return;
       final live = _camera;
       _cancelCountdown();
@@ -148,7 +257,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         _error = null;
         _loading = false;
       });
-      await live?.dispose();
+      await _release(live);
       if (!mounted) return;
       await Navigator.of(context).push(
         PageRouteBuilder<void>(
@@ -157,6 +266,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
           pageBuilder: (_, animation, secondaryAnimation) => PhotoReviewScreen(
             bytes: bytes,
             english: _english,
+            check: check,
             onContinue: widget.onContinue,
           ),
         ),
@@ -172,8 +282,8 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
             ),
             content: Text(
               t(
-                'Impossible de lire la photo. Réessayez.',
-                'Could not read the photo. Please try again.',
+                Friendly.photoUnreadable,
+                'This photo couldn’t be opened 📷 Take another one or choose a different photo.',
               ),
             ),
           ),
@@ -198,12 +308,13 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         state == AppLifecycleState.paused) {
       _cancelCountdown();
       ++_epoch;
+      final stopped = _stopFilter();
       final old = _camera;
       setState(() {
         _camera = null;
         _loading = false;
       });
-      unawaited(old?.dispose());
+      unawaited(stopped.then((_) => _release(old)));
     } else if (state == AppLifecycleState.resumed &&
         _photo == null &&
         !_busy &&
@@ -215,9 +326,11 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    final stopped = _stopFilter();
     ++_epoch;
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_camera?.dispose());
+    final camera = _camera;
+    unawaited(stopped.then((_) => _release(camera)));
     super.dispose();
   }
 
@@ -246,7 +359,13 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                     child: SizedBox(
                       width: 1000 * ratio,
                       height: 1000,
-                      child: CameraPreview(_camera!),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _faceSmoothing.preview(CameraPreview(_camera!)),
+                          BeautyFilter.layer(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -475,6 +594,19 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     if (_camera != null)
+                      ValueListenableBuilder<LightingIssue?>(
+                        valueListenable: _faceSmoothing.lighting,
+                        builder: (context, issue, _) => issue == null
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: PhotoTip(
+                                  lightingAdvice(issue, english: _english),
+                                  key: const ValueKey('live-lighting-tip'),
+                                ),
+                              ),
+                      ),
+                    if (_camera != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: _glass(
@@ -512,7 +644,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                             for (final label in [
                               t('Corps entier', 'Full body'),
                               t('Bonne lumière', 'Good light'),
-                              t('Pas de filtres', 'No filters'),
+                              t('Visage naturel', 'Natural face'),
                             ])
                               Text(
                                 '✓ $label',

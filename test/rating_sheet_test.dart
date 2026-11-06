@@ -21,7 +21,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsNothing);
+      expect(find.byKey(const ValueKey('rating-3')), findsNothing);
+      expect(find.text("😞"), findsOneWidget);
+      expect(find.text("🙂"), findsOneWidget);
       expect(
         tester
             .widget<DigiButton>(find.byKey(const ValueKey('rating-submit')))
@@ -54,7 +58,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('rating-5')));
     await tester.pumpAndSettle();
-    expect(find.text('Excellent ✨'), findsOneWidget);
+    expect(find.text('Satisfait'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('rating-submit')));
     await tester.pumpAndSettle();
     expect(sent!['rating'], 5);

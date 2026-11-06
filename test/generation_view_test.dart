@@ -37,7 +37,7 @@ void main() {
       });
     }
   }
-  testWidgets('covered partner skips payment', (tester) async {
+  testWidgets('public try-on always shows the demo payment', (tester) async {
     final bytes = await photo(tester);
     await tester.pumpWidget(
       app(
@@ -45,9 +45,8 @@ void main() {
           photo: bytes,
           outfitName: 'Caftan',
           outfitUrl: '',
-          busy: true,
+          busy: false,
           stage: 1,
-          covered: true,
           paid: true,
           onGenerate: () {},
         ),
@@ -55,6 +54,35 @@ void main() {
     );
     await tester.pump();
     expect(find.byKey(const ValueKey('demo-pay')), findsNothing);
-    expect(find.text('Inclus dans votre abonnement'), findsOneWidget);
+    expect(find.text('Inclus dans votre abonnement'), findsNothing);
+    expect(find.textContaining('Paiement confirmé'), findsOneWidget);
+  });
+  testWidgets('store payment shows the store price without demo wording', (
+    tester,
+  ) async {
+    final bytes = await photo(tester);
+    var payments = 0;
+    await tester.pumpWidget(
+      app(
+        GenerationView(
+          photo: bytes,
+          outfitName: 'Caftan',
+          outfitUrl: '',
+          busy: false,
+          stage: 1,
+          generated: true,
+          demo: false,
+          price: 'MAD 29.00',
+          onGenerate: () {},
+          onPay: () => payments++,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('Démo'), findsNothing);
+    expect(find.text('Carte bancaire'), findsNothing);
+    expect(find.text('MAD 29.00'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('demo-pay')));
+    expect(payments, 1);
   });
 }

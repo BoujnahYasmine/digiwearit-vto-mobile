@@ -21,11 +21,14 @@ class LookCategory {
     required this.name,
     required this.gender,
     required this.active,
+    this.imageUrl = '',
+    this.description = '',
   });
   final String id;
   final String name;
   final String gender;
   final bool active;
+  final String imageUrl, description;
 
   factory LookCategory.fromFirestore(String id, Map<String, dynamic> data) =>
       LookCategory(
@@ -33,6 +36,8 @@ class LookCategory {
         name: (data['name'] as String? ?? '').trim(),
         gender: normalizedGender(data['gender'] as String? ?? ''),
         active: data['active'] != false,
+        imageUrl: data['imageUrl'] as String? ?? '',
+        description: data['description'] as String? ?? '',
       );
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'experience_session.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_startup.dart';
 import 'experience_failure.dart';
 import 'mobile_layout.dart';
 import 'full_photo_scene.dart';
@@ -11,6 +12,7 @@ Future<EndChoice?> showRatingSheet(
   BuildContext context, {
   String? tryOnId,
   String? outfitId,
+  FeedbackSender? sender,
 }) => showModalBottomSheet<EndChoice>(
   context: context,
   isScrollControlled: true,
@@ -19,7 +21,8 @@ Future<EndChoice?> showRatingSheet(
   enableDrag: false,
   backgroundColor: Colors.transparent,
   barrierColor: const Color(0x59080619),
-  builder: (_) => RatingSheet(tryOnId: tryOnId, outfitId: outfitId),
+  builder: (_) =>
+      RatingSheet(tryOnId: tryOnId, outfitId: outfitId, sender: sender),
 );
 
 class RatingSheet extends StatefulWidget {
@@ -35,14 +38,7 @@ class _RatingSheetState extends State<RatingSheet> {
   bool busy = false, done = false, skipped = false;
   String? error;
   final comment = TextEditingController();
-  static const labels = [
-    'Très mauvais',
-    'Pas terrible',
-    'Correct',
-    'Très bien',
-    'Excellent ✨',
-  ];
-  bool get demo => widget.sender == null && !ExperienceApi.configured;
+  bool get demo => false;
   @override
   void dispose() {
     comment.clear();
@@ -77,12 +73,23 @@ class _RatingSheetState extends State<RatingSheet> {
       };
       if (widget.sender != null) {
         await widget.sender!(payload);
-      } else if (ExperienceApi.configured) {
-        await ExperienceApi.post('/feedback', payload);
+      } else {
+        await FirebaseStartup.ensureReady();
+        final reviews = FirebaseFirestore.instance.collection(
+          'experience_ratings',
+        );
+        final id = widget.tryOnId;
+        final target = id != null && !id.contains('/')
+            ? reviews.doc(id)
+            : reviews.doc();
+        await target
+            .set({...payload, 'createdAt': FieldValue.serverTimestamp()})
+            .timeout(const Duration(seconds: 20));
       }
       if (mounted) setState(() => done = true);
     } catch (e) {
-      if (mounted) setState(() => error = explainFailure(e));
+      if (mounted)
+        setState(() => error = explainFailure(e, fallback: Friendly.review));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -155,8 +162,9 @@ class _RatingSheetState extends State<RatingSheet> {
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, box) => Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
+                      child: SingleChildScrollView(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: SizedBox(
                           width: box.maxWidth,
                           child: Column(
@@ -246,32 +254,43 @@ class _RatingSheetState extends State<RatingSheet> {
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
-                                    for (var i = 1; i <= 5; i++)
+                                    for (final i in const [1, 5])
                                       Expanded(
                                         child: Semantics(
-                                          selected: i <= rating,
+                                          selected: i == rating,
                                           child: IconButton(
                                             key: ValueKey('rating-$i'),
-                                            tooltip: labels[i - 1],
+                                            tooltip: i == 1
+                                                ? 'Pas satisfait'
+                                                : 'Satisfait',
                                             onPressed: busy
                                                 ? null
                                                 : () => setState(
                                                     () => rating = i,
                                                   ),
                                             icon: AnimatedScale(
-                                              scale: i <= rating ? 1.08 : 1,
+                                              scale: i == rating ? 1.08 : 1,
                                               duration: const Duration(
                                                 milliseconds: 180,
                                               ),
                                               curve: Curves.easeOutBack,
-                                              child: Icon(
-                                                i <= rating
-                                                    ? Icons.star
-                                                    : Icons.star_border,
-                                                color: i <= rating
-                                                    ? const Color(0xffffd448)
-                                                    : Colors.white70,
-                                                size: 36,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  3,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: i == rating
+                                                      ? Colors.white24
+                                                      : Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  i == 1 ? '😞' : '🙂',
+                                                  style: const TextStyle(
+                                                    fontSize: 30,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -282,7 +301,9 @@ class _RatingSheetState extends State<RatingSheet> {
                                 Text(
                                   rating == 0
                                       ? 'Choisissez une note'
-                                      : labels[rating - 1],
+                                      : rating == 1
+                                      ? 'Pas satisfait'
+                                      : 'Satisfait',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,

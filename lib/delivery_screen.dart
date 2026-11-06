@@ -50,8 +50,9 @@ class _DeliverySheetState extends State<DeliverySheet> {
   }
 
   Future<void> send() async {
-    if (busy || !available || !validEmail || !form.currentState!.validate())
+    if (busy || !available || !validEmail || !form.currentState!.validate()) {
       return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       busy = true;
@@ -67,10 +68,7 @@ class _DeliverySheetState extends State<DeliverySheet> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => error = explainFailure(
-            e,
-            fallback: 'L’e-mail n’a pas pu être envoyé. Réessayez.',
-          ),
+          () => error = explainFailure(e, fallback: Friendly.emailNotSent),
         );
       }
     } finally {
@@ -146,8 +144,9 @@ class _DeliverySheetState extends State<DeliverySheet> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, box) => Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
+                        child: SingleChildScrollView(
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
                           child: SizedBox(
                             width: box.maxWidth,
                             child: Form(
@@ -205,7 +204,7 @@ class _DeliverySheetState extends State<DeliverySheet> {
                                   else ...[
                                     if (keyboard == 0) ...[
                                       const Text(
-                                        'Entrez votre adresse e-mail pour recevoir votre photo.',
+                                        'Entrez votre adresse e-mail pour recevoir votre photo. Adresse visible par Digiwearit et votre entreprise partenaire.',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: Colors.white70,

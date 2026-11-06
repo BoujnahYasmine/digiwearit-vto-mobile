@@ -12,7 +12,7 @@ void main() {
           const WelcomeScreen(),
           routes: {
             '/universe': (_) => const Scaffold(body: Text('Public')),
-            '/partner': (_) => const Scaffold(body: Text('Partner')),
+            '/mirror': (_) => const Scaffold(body: Text('Partner')),
           },
         ),
       );
@@ -20,11 +20,15 @@ void main() {
       visible(tester, find.byKey(const ValueKey('personal-start')));
       visible(tester, find.byKey(const ValueKey('partner-start')));
       expect(find.text('Commencer l’essayage'), findsOneWidget);
+      expect(find.text('Espace partenaire'), findsOneWidget);
+      expect(find.text('Espace miroir'), findsNothing);
+      expect(find.byKey(const ValueKey('mirror-start')), findsNothing);
       await tester.tap(find.text('FR'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
       expect(find.text('Start your try-on'), findsOneWidget);
+      expect(find.text('Mirror space'), findsNothing);
       await tester.tap(find.text('EN'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Français'));

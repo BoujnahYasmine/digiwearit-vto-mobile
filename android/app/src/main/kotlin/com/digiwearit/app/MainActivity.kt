@@ -1,4 +1,4 @@
-package com.example.digiwearit2
+package com.digiwearit.app
 
 import io.flutter.embedding.android.FlutterActivity
 

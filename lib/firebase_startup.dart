@@ -4,6 +4,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'package:flutter/material.dart';
+import 'experience_failure.dart';
 
 import 'firebase_options.dart';
 
@@ -75,12 +76,9 @@ class _FirebaseReadyState extends State<FirebaseReady> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (snapshot.hasError) ...[
-                  const Icon(Icons.cloud_off_outlined, size: 48),
+                  const Icon(Icons.wifi_rounded, size: 48),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Connexion au service indisponible.\nVérifiez votre connexion et réessayez.',
-                    textAlign: TextAlign.center,
-                  ),
+                  const Text(Friendly.connection, textAlign: TextAlign.center),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: () => setState(() {

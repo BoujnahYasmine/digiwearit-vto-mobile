@@ -20,9 +20,10 @@ class TryOnRequest {
       : outfit.fullImageUrl.isNotEmpty
       ? outfit.fullImageUrl
       : outfit.thumbnailUrl;
-  List<String> get lookImageUrls => outfit.promptImageUrl.isNotEmpty
-      ? [outfit.promptImageUrl]
-      : outfit.imageUrls;
+  List<String> get lookImageUrls => <String>{
+    if (outfit.promptImageUrl.isNotEmpty) outfit.promptImageUrl,
+    ...outfit.imageUrls.where((url) => url.isNotEmpty),
+  }.take(5).toList();
   String get backgroundUrl => outfit.backgroundUrl;
   bool get makeupAllowed => outfit.makeupAllowed;
   String get extraPrompt => outfit.extraPrompt;

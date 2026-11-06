@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
@@ -11,7 +11,11 @@ class DigiwearitWatermark {
   final Future<ByteData> Function(String key) logoLoader;
   static const logoAsset = 'lib/logo digiwearit.png';
 
-  Future<Uint8List> apply(Uint8List generatedImage) async {
+  Future<Uint8List> apply(
+    Uint8List generatedImage, {
+    bool left = false,
+    bool topCenter = false,
+  }) async {
     final sourceCodec = await ui.instantiateImageCodec(generatedImage);
     final sourceFrame = await sourceCodec.getNextFrame();
     final source = sourceFrame.image;
@@ -31,11 +35,17 @@ class DigiwearitWatermark {
       logoCodec.dispose();
       final width = source.width.toDouble();
       final padding = (width * .025).clamp(4.0, 72.0);
-      final watermarkWidth = (width * .13).clamp(28.0, 280.0);
+      final desiredWidth = (width * (topCenter ? .20 : .18)).clamp(28.0, 320.0);
+      final watermarkWidth = math.min(
+        math.min(desiredWidth, width - padding * 2),
+        source.height * (topCenter ? .12 : .08) * logo.width / logo.height,
+      );
       final watermarkHeight = watermarkWidth * logo.height / logo.width;
       final destination = ui.Rect.fromLTWH(
-        width - watermarkWidth - padding,
-        source.height - watermarkHeight - padding,
+        topCenter
+            ? (width - watermarkWidth) / 2
+            : (left ? padding : width - watermarkWidth - padding),
+        topCenter ? padding : source.height - watermarkHeight - padding,
         watermarkWidth,
         watermarkHeight,
       );
@@ -48,15 +58,13 @@ class DigiwearitWatermark {
           backing,
           ui.Radius.circular(backing.height / 3),
         ),
-        ui.Paint()..color = const ui.Color(0x4D11101B),
+        ui.Paint()..color = const ui.Color(0xF2FFFFFF),
       );
       canvas.drawImageRect(
         logo,
         ui.Rect.fromLTWH(0, 0, logo.width.toDouble(), logo.height.toDouble()),
         destination,
-        ui.Paint()
-          ..filterQuality = ui.FilterQuality.high
-          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 2),
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
       );
       picture = recorder.endRecording();
       branded = await picture.toImage(source.width, source.height);

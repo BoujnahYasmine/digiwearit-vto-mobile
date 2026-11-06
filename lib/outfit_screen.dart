@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'experience_failure.dart';
 import 'outfit_repository.dart';
 import 'try_on_session.dart';
 
@@ -103,17 +104,15 @@ class _OutfitScreenState extends State<OutfitScreen> {
     final models = collection.where((o) => outfitType(o) == selected).toList();
     if (models.isEmpty) return;
     TryOnSession.current.selectCategory(selected!);
-    await Navigator.pushNamed(
-      context,
-      '/model',
-      arguments: OutfitSelection(
-        outfit: models.first,
-        outfits: models,
-        gender: widget.selection.gender,
-        english: english,
-        style: widget.selection.style,
-      ),
+    final selection = OutfitSelection(
+      outfit: models.first,
+      outfits: models,
+      gender: widget.selection.gender,
+      english: english,
+      style: widget.selection.style,
     );
+    TryOnSession.current.selectOutfit(selection);
+    await Navigator.pushNamed(context, '/try-on', arguments: selection);
   }
 
   @override
@@ -277,9 +276,7 @@ class _OutfitScreenState extends State<OutfitScreen> {
                           children: [
                             DigiButton(
                               key: const ValueKey('outfit-continue'),
-                              label: english
-                                  ? 'View models'
-                                  : 'Voir les modèles',
+                              label: english ? 'Continue' : 'Continuer',
                               onPressed: loading || error || selected == null
                                   ? null
                                   : next,
@@ -341,8 +338,8 @@ class _OutfitScreenState extends State<OutfitScreen> {
           children: [
             Text(
               english
-                  ? 'Catalogue unavailable. Check your connection.'
-                  : 'Catalogue indisponible. Vérifiez votre connexion.',
+                  ? 'The collection is taking a moment to arrive 👗 Check your connection, then try again.'
+                  : Friendly.catalogue,
               textAlign: TextAlign.center,
             ),
             TextButton(

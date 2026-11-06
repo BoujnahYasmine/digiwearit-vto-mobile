@@ -1,55 +1,123 @@
-# Digiwearit on the iPhone simulator
+# Installer Digiwearit sur iPhone avec un MacBook
 
-The existing Flutter app now has native iOS Firebase configuration for project `vto-with-nano`, app `1:788742730808:ios:097ad6b0f8d1e58d4ba2cd`, bundle ID `com.digiwearit.app`. It uses the same catalogue, Storage and AI generation flow as web.
+Application Flutter, identifiant iOS `com.digiwearit.app`, projet Firebase
+`vto-with-nano`, iOS 15.5 minimum. La configuration Firebase iOS
+(`ios/Runner/GoogleService-Info.plist`) et les autorisations caméra et photos
+sont déjà incluses.
 
-## On your Mac, once
+> Ces étapes n'ont pas pu être exécutées depuis le poste Windows de
+> développement : la compilation iOS se vérifie uniquement sur Mac.
 
-1. Install Xcode, open it, accept its license, and install an iOS simulator runtime in Xcode Settings > Components. Use a current Xcode compatible with your macOS and Firebase SDK 12.17.0 (Xcode 16.2 or newer).
-2. Select Xcode's tools: `sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer` and `sudo xcodebuild -runFirstLaunch`.
-3. Install Flutter (this project uses Flutter 3.41.7 / Dart 3.11.5) and CocoaPods. Check `flutter doctor -v` and resolve its Xcode/CocoaPods findings. The launcher also uses Python 3 supplied with the Xcode command-line tools.
-4. Copy the complete `digiwearit2` folder to the Mac, including assets, `pubspec.lock`, `ios`, and `scripts`. Generated Windows build files are not needed. Do not copy just the `ios` directory.
+## 1. Préparer le Mac (une seule fois)
 
-## Run
+1. Installer **Xcode** depuis l'App Store (version 16.2 ou plus récente),
+   l'ouvrir une fois et accepter la licence.
+2. Dans le Terminal :
+   ```bash
+   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+   sudo xcodebuild -runFirstLaunch
+   xcode-select --install          # outils en ligne de commande, si demandé
+   ```
+3. Installer **Homebrew** (https://brew.sh), puis **CocoaPods** :
+   ```bash
+   brew install cocoapods
+   ```
+4. Installer **Flutter 3.41** (https://docs.flutter.dev/get-started/install/macos),
+   puis vérifier :
+   ```bash
+   flutter doctor -v
+   ```
+   Corriger ce que `flutter doctor` signale pour Xcode et CocoaPods.
 
-From the `digiwearit2` directory:
+## 2. Récupérer le projet
+
+```bash
+git clone https://github.com/BoujnahYasmine/digiwearit-vto-mobile.git
+cd digiwearit-vto-mobile
+flutter pub get
+cd ios && pod install && cd ..
+```
+
+La première installation des pods prend plusieurs minutes.
+
+**Musique (facultatif).** Le fichier `assets/music/background.mp3` n'est pas
+publié sur GitHub (licence de la musique). Copiez votre fichier à cet
+emplacement pour avoir la musique ; sans lui, l'application fonctionne en
+silence.
+
+## 3. Installer sur un iPhone (recommandé)
+
+La caméra, le filtre « Éclat » et la détection du visage se testent sur un
+vrai iPhone.
+
+1. Brancher l'iPhone au Mac avec un câble et accepter « Faire confiance à cet
+   ordinateur » sur le téléphone.
+2. Sur l'iPhone (iOS 16 ou plus) : **Réglages > Confidentialité et sécurité >
+   Mode développeur** → activer, puis redémarrer le téléphone.
+3. Ouvrir le projet dans Xcode :
+   ```bash
+   open ios/Runner.xcworkspace
+   ```
+   (ouvrir le fichier `.xcworkspace`, pas `.xcodeproj`).
+4. Dans Xcode : cibler **Runner** > onglet **Signing & Capabilities** :
+   - cocher **Automatically manage signing** ;
+   - **Team** : choisir votre compte Apple (Xcode > Settings > Accounts pour
+     l'ajouter ; un identifiant Apple gratuit suffit pour tester).
+   - Si Xcode indique que l'identifiant `com.digiwearit.app` n'est pas
+     disponible pour votre équipe, le remplacer temporairement par un
+     identifiant unique, par exemple `com.votrenom.digiwearit`.
+5. Lancer sur le téléphone depuis le Terminal :
+   ```bash
+   flutter devices                          # repérer l'iPhone
+   flutter run --release --dart-define=DEMO_PAYMENT=true -d <id-de-l-iphone>
+   ```
+   `DEMO_PAYMENT=true` utilise le paiement de démonstration : le paiement
+   réel par l'App Store demande un compte développeur payant et un produit
+   configuré dans App Store Connect (voir section 5).
+6. Au premier lancement, si l'iPhone refuse d'ouvrir l'application :
+   **Réglages > Général > VPN et gestion de l'appareil** → faire confiance à
+   votre profil développeur.
+
+Avec un identifiant Apple gratuit, l'application installée expire au bout de
+7 jours : il suffit de relancer `flutter run` pour la réinstaller.
+
+## 4. Simulateur (sans iPhone)
 
 ```bash
 bash scripts/run_ios_simulator.sh
 ```
 
-The script regenerates Flutter's local paths, installs pods, boots an available iPhone simulator running iOS 15 or later, and runs the app. No Apple Developer membership, provisioning profile, or signing team is needed for a simulator build. The first pod installation/build can take several minutes and requires internet access.
+Le simulateur n'a pas de caméra : utiliser **Galerie** avec une photo JPG ou
+PNG glissée sur la fenêtre du simulateur. Sur un Mac à puce Apple, la
+bibliothèque de détection du visage (Google ML Kit) peut refuser de se
+compiler pour le simulateur ; dans ce cas, utiliser un vrai iPhone.
 
-To use a specific simulator or preload your own test photo:
+## 5. Publier (TestFlight ou App Store)
 
-```bash
-SIMULATOR_UDID="your-simulator-uuid" PHOTO_PATH="/absolute/path/photo.jpg" bash scripts/run_ios_simulator.sh
-```
+1. Adhérer à l'**Apple Developer Program** (99 USD par an).
+2. Dans **App Store Connect**, créer l'application avec l'identifiant
+   `com.digiwearit.app`, accepter l'accord des applications payantes, puis
+   créer l'achat intégré **consommable** `digiwearit_tryon_unlock`
+   (un essayage).
+3. Dans Xcode, onglet **Signing & Capabilities**, ajouter la capacité
+   **In-App Purchase**.
+4. Construire et envoyer :
+   ```bash
+   flutter build ipa --release
+   ```
+   puis ouvrir le fichier produit dans `build/ios/archive/` avec Xcode
+   (**Window > Organizer > Distribute App**) ou l'application **Transporter**.
+5. Tester avec **TestFlight** avant la publication sur l'App Store.
 
-You can also drag a JPG/PNG onto Simulator, then tap **Galerie** in the app. Use a physical iPhone to verify live camera capture and the three-second countdown. HEIC selection has a known image_picker simulator limitation; use JPG/PNG for simulator tests.
+## Vérifications sur l'iPhone
 
-## Permissions and Firebase
+- Accueil → Commencer l'essayage → univers → style → catégorie.
+- Autoriser la caméra ; vérifier le compte à rebours, la lumière « Éclat » et
+  les conseils de lumière.
+- Génération : une génération appelle le vrai service d'IA et peut être
+  facturée sur le projet Firebase.
+- Espace partenaire : activer avec un code créé dans l'espace entreprise du
+  site d'administration.
 
-- Camera: declared with the virtual try-on purpose; requested by the camera plugin when capture opens.
-- Photos: declared; the system picker accesses the selected image with full metadata requests disabled.
-- Microphone: audio capture is disabled; the app does not request microphone access.
-- Local network: Flutter adds its debug-only discovery permission when building. Allow it if prompted for hot reload/debugging.
-- No location, notification, photo-library-write, or tracking permission is required by this flow. CocoaPods selects Analytics without advertising-ID support.
-- Firebase's real `GoogleService-Info.plist` is included in Runner's resources, with matching Dart iOS options. Do not replace it with the web app ID.
-- Existing Firestore/Storage rules and AI prompt are unchanged. iOS does not require an Android SHA fingerprint. HTTPS networking needs no broad App Transport Security exception.
-- Payment remains the approved demo; email and partner validation require the existing backend integration. This preparation does not turn those into live services.
-
-## Verify on the Mac
-
-Go through gender, style, category, model, Galerie, confirmation, generation and demo payment. A generation attempt uses the existing real AI service and can incur the project's normal usage charges. Check that the actual returned image appears and that Home clears the session.
-
-For a compile-only check:
-
-```bash
-flutter build ios --simulator --debug
-```
-
-For Xcode debugging, open `ios/Runner.xcworkspace` after running the launcher. A physical device additionally needs a signing team and device trust in Xcode. Denied camera permission can be restored in iOS Settings > Privacy & Security > Camera; restricted access may require changing parental/device restrictions.
-
-Native compilation and simulator execution cannot be verified from the Windows workspace. The final native acceptance check must run on the Mac.
-
-References: [Flutter iOS setup](https://docs.flutter.dev/platform-integration/ios/setup), [Firebase Flutter setup](https://firebase.google.com/docs/flutter/setup), [image_picker iOS notes](https://pub.dev/packages/image_picker).
+Une autorisation caméra refusée se rétablit dans **Réglages >
+Confidentialité et sécurité > Caméra**.

@@ -5,6 +5,19 @@ import 'package:digiwearit2/firebase_options.dart';
 
 void main() {
   tearDown(() => debugDefaultTargetPlatformOverride = null);
+  test('Android selects the registered Firebase app and package', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final options = DefaultFirebaseOptions.currentPlatform;
+    expect(options, same(DefaultFirebaseOptions.android));
+    expect(options.projectId, DefaultFirebaseOptions.web.projectId);
+    expect(options.appId, '1:788742730808:android:7f4da01e495554534ba2cd');
+    final config = File('android/app/google-services.json').readAsStringSync();
+    expect(config, contains('com.digiwearit.app'));
+    expect(config, contains(options.appId));
+    final build = File('android/app/build.gradle.kts').readAsStringSync();
+    expect(build, contains('applicationId = "com.digiwearit.app"'));
+    expect(build, contains('com.google.gms.google-services'));
+  });
   test('iOS selects its registered Firebase app instead of web options', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     final options = DefaultFirebaseOptions.currentPlatform;
@@ -19,7 +32,7 @@ void main() {
     expect(info, contains('NSPhotoLibraryUsageDescription'));
     expect(info, isNot(contains('NSMicrophoneUsageDescription')));
     final podfile = File('ios/Podfile').readAsStringSync();
-    expect(podfile, contains("platform :ios, '15.0'"));
+    expect(podfile, contains("platform :ios, '15.5'"));
     expect(podfile, contains('use_frameworks! :linkage => :static'));
     expect(
       File('lib/camera_service.dart').readAsStringSync(),

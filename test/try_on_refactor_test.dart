@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:digiwearit2/main.dart';
-import 'package:digiwearit2/experience_session.dart';
 import 'package:digiwearit2/outfit_repository.dart';
 import 'package:digiwearit2/outfit_selection.dart';
 import 'package:digiwearit2/try_on_request.dart';
@@ -16,7 +15,6 @@ import 'package:digiwearit2/welcome_screen.dart';
 import 'fixtures.dart';
 
 void main() {
-  setUp(ExperienceSession.personal);
   OutfitSelection selection() => OutfitSelection(
     outfit: model('a', 'Caftan Royal'),
     gender: 'femme',
@@ -39,54 +37,51 @@ void main() {
       );
     },
   );
-  test(
-    'reference image overrides display image and user bytes reach model payload',
-    () async {
-      final outfit = Outfit.fromFirestore('regional', {
-        'name': 'Ait Baamrane',
-        'gender': 'femme',
-        'category': 'Ait Baamrane',
-        'active': true,
-        'thumbnailUrl': 'display.jpg',
-        'fullImageUrl': 'full.jpg',
-        'promptImageUrl': 'reference.png',
-        'imageUrls': ['old.jpg'],
-      });
-      final bytes = Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]);
-      final urls = <String>[];
-      final service = NanoBananaService(
-        imageLoader: (url) async {
-          urls.add(url);
-          return InlineDataPart('image/png', Uint8List.fromList([9]));
-        },
-      );
-      final parts = await service.buildInput(
-        TryOnRequest(
-          userPhotoBytes: bytes,
-          outfit: outfit,
-          gender: 'femme',
-          style: 'Marocain',
-          category: 'Ait Baamrane',
-        ),
-      );
-      expect(urls, ['reference.png']);
-      expect(parts.whereType<InlineDataPart>().first.bytes, same(bytes));
-      expect(parts.whereType<TextPart>().first.text, contains('Ait Baamrane'));
-      expect(
-        OutfitRepository.filter(
-          [outfit],
-          gender: 'femme',
-          style: 'Marocain',
-          category: 'Ait Baamrane',
-        ),
+  test('all reference images and user bytes reach model payload', () async {
+    final outfit = Outfit.fromFirestore('regional', {
+      'name': 'Ait Baamrane',
+      'gender': 'femme',
+      'category': 'Ait Baamrane',
+      'active': true,
+      'thumbnailUrl': 'display.jpg',
+      'fullImageUrl': 'full.jpg',
+      'promptImageUrl': 'reference.png',
+      'imageUrls': ['old.jpg'],
+    });
+    final bytes = Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]);
+    final urls = <String>[];
+    final service = NanoBananaService(
+      imageLoader: (url) async {
+        urls.add(url);
+        return InlineDataPart('image/png', Uint8List.fromList([9]));
+      },
+    );
+    final parts = await service.buildInput(
+      TryOnRequest(
+        userPhotoBytes: bytes,
+        outfit: outfit,
+        gender: 'femme',
+        style: 'Marocain',
+        category: 'Ait Baamrane',
+      ),
+    );
+    expect(urls, ['reference.png', 'old.jpg']);
+    expect(parts.whereType<InlineDataPart>().first.bytes, same(bytes));
+    expect(parts.whereType<TextPart>().first.text, contains('Ait Baamrane'));
+    expect(
+      OutfitRepository.filter(
         [outfit],
-      );
-      expect(
-        OutfitRepository.filter([outfit], gender: 'homme', style: 'Marocain'),
-        isEmpty,
-      );
-    },
-  );
+        gender: 'femme',
+        style: 'Marocain',
+        category: 'Ait Baamrane',
+      ),
+      [outfit],
+    );
+    expect(
+      OutfitRepository.filter([outfit], gender: 'homme', style: 'Marocain'),
+      isEmpty,
+    );
+  });
   test('generation is deduplicated and payment is independent', () async {
     final pending = Completer<List<Uint8List>>();
     var calls = 0;
@@ -100,7 +95,7 @@ void main() {
     session.confirm(selection(), bytes);
     final a = session.generate(), b = session.generate();
     expect(identical(a, b), isTrue);
-    session.setPayment(PaymentStatus.demoPaid);
+    session.setPayment(PaymentStatus.paid);
     expect(session.canReveal, isFalse);
     await Future<void>.delayed(Duration.zero);
     expect(calls, 1);
@@ -168,7 +163,7 @@ void main() {
       session.confirm(selection(), Uint8List(1));
       final run = session.generate();
       await Future<void>.delayed(Duration.zero);
-      session.setPayment(PaymentStatus.demoPaid);
+      session.setPayment(PaymentStatus.paid);
       session.selectCategory('Amazigh');
       expect(session.gender, 'femme');
       expect(session.style, 'Marocain');

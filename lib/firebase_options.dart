@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
-/// Firebase configuration for the registered Digiwearit web and iOS apps.
+/// Firebase configuration for the registered Digiwearit web, iOS and Android apps.
 ///
 /// Other native platforms still require their Firebase configuration files
 /// before Firebase can be initialized on those platforms.
@@ -26,11 +26,19 @@ abstract final class DefaultFirebaseOptions {
     iosBundleId: 'com.digiwearit.app',
   );
 
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyA_bACNlBssYPtk82Nwa79XBnzSyN-15Ks',
+    appId: '1:788742730808:android:7f4da01e495554534ba2cd',
+    messagingSenderId: '788742730808',
+    projectId: 'vto-with-nano',
+    storageBucket: 'vto-with-nano.firebasestorage.app',
+  );
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;
     if (defaultTargetPlatform == TargetPlatform.iOS) return ios;
+    if (defaultTargetPlatform == TargetPlatform.android) return android;
     throw UnsupportedError(
-      'Firebase is currently configured for web and iOS. Configure this platform before running it.',
+      'Firebase is currently configured for web, iOS and Android. Configure this platform before running it.',
     );
   }
 }

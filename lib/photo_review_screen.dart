@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'photo_check.dart';
 import 'mobile_layout.dart';
 
 class PhotoReviewScreen extends StatefulWidget {
@@ -9,9 +10,14 @@ class PhotoReviewScreen extends StatefulWidget {
     required this.bytes,
     required this.onContinue,
     this.english = false,
+    this.check,
   });
   final Uint8List bytes;
   final bool english;
+
+  /// Automatic light and camera-quality check of the photo; problems are
+  /// shown as tips and the customer may still continue.
+  final PhotoCheck? check;
   final Future<void> Function(BuildContext, Uint8List) onContinue;
   @override
   State<PhotoReviewScreen> createState() => _PhotoReviewScreenState();
@@ -182,9 +188,28 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
                             ],
                           ),
                         ),
+                        if (widget.check?.lighting case final issue?) ...[
+                          const SizedBox(height: 8),
+                          PhotoTip(
+                            lightingAdvice(issue, english: english),
+                            key: const ValueKey('photo-lighting-warning'),
+                          ),
+                        ],
+                        if (widget.check?.quality case final issue?) ...[
+                          const SizedBox(height: 8),
+                          PhotoTip(
+                            qualityAdvice(issue, english: english),
+                            key: const ValueKey('photo-quality-warning'),
+                          ),
+                        ],
                         const SizedBox(height: 5),
                         Text(
-                          english
+                          widget.check?.lighting != null ||
+                                  widget.check?.quality != null
+                              ? (english
+                                    ? 'Retake for a better try-on, or continue.'
+                                    : 'Reprenez pour un meilleur essayage, ou continuez.')
+                              : english
                               ? 'Check your photo before continuing.'
                               : 'Vérifiez votre photo avant de continuer.',
                           textAlign: TextAlign.center,

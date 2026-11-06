@@ -1,11 +1,13 @@
 import 'try_on_session.dart';
 import 'dart:typed_data';
+import 'result_photo.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'style_selection.dart';
 import 'outfit_selection.dart';
 import 'mobile_layout.dart';
 import 'full_photo_scene.dart';
+import 'classic_delivery_service.dart';
 import 'delivery_screen.dart';
 import 'rating_sheet.dart';
 
@@ -29,6 +31,27 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   int index = 0;
   late bool english = widget.selection.english;
+
+  /// Panel fraction of the screen; dragging it down reveals the full photo.
+  final sheet = DraggableScrollableController();
+  double? extent;
+  static const closedSheet = .12;
+
+  @override
+  void dispose() {
+    sheet.dispose();
+    super.dispose();
+  }
+
+  void toggleSheet(double open) {
+    if (!sheet.isAttached) return;
+    sheet.animateTo(
+      sheet.size > (open + closedSheet) / 2 ? closedSheet : open,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   bool presenting = false;
   void another() {
     TryOnSession.current.reset();
@@ -69,7 +92,7 @@ class _ResultScreenState extends State<ResultScreen> {
       context,
       bytes: widget.images[index],
       resultId: '${widget.resultId}-$index',
-      sender: widget.emailSender,
+      sender: widget.emailSender ?? ClassicDeliveryService.send,
     );
     presenting = false;
     if (mounted && sent == true) await rate();
@@ -80,27 +103,27 @@ class _ResultScreenState extends State<ResultScreen> {
     final compact =
         MediaQuery.sizeOf(context).height < 700 ||
         MediaQuery.textScalerOf(context).scale(16) > 22;
+    final screen = MediaQuery.sizeOf(context).height;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final panelHeight =
+        (compact ? 290 : 364) + (widget.images.length > 1 ? 48 : 0);
+    final open = ((panelHeight + 12 + bottomInset) / screen).clamp(.3, .92);
+    final current = (extent ?? open).clamp(closedSheet, open);
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xff11101b),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          ClipRect(
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Image.memory(
-                widget.images[index],
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: screen * current,
+            child: GestureDetector(
+              onTap: () => toggleSheet(open),
+              child: ResultPhoto(bytes: widget.images[index]),
             ),
-          ),
-          Image.memory(
-            widget.images[index],
-            key: const ValueKey('result-photo'),
-            fit: BoxFit.contain,
-            gaplessPlayback: true,
           ),
           const IgnorePointer(
             child: DecoratedBox(
@@ -234,33 +257,54 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  if (widget.images.length > 1)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton.filledTonal(
-                          tooltip: 'Précédent',
-                          onPressed: () => setState(
-                            () => index = (index - 1) % widget.images.length,
-                          ),
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        Text(
-                          '${index + 1}/${widget.images.length}',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        IconButton.filledTonal(
-                          tooltip: 'Suivant',
-                          onPressed: () => setState(
-                            () => index = (index + 1) % widget.images.length,
-                          ),
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
-                    ),
-                  _resultPanel(compact),
                 ],
+              ),
+            ),
+          ),
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              setState(() => extent = notification.extent);
+              return false;
+            },
+            child: DraggableScrollableSheet(
+              key: const ValueKey('result-sheet'),
+              controller: sheet,
+              initialChildSize: open,
+              minChildSize: closedSheet,
+              maxChildSize: open,
+              snap: true,
+              builder: (context, scroll) => SingleChildScrollView(
+                controller: scroll,
+                padding: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+                child: Column(
+                  children: [
+                    if (widget.images.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton.filledTonal(
+                            tooltip: 'Précédent',
+                            onPressed: () => setState(
+                              () => index = (index - 1) % widget.images.length,
+                            ),
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Text(
+                            '${index + 1}/${widget.images.length}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          IconButton.filledTonal(
+                            tooltip: 'Suivant',
+                            onPressed: () => setState(
+                              () => index = (index + 1) % widget.images.length,
+                            ),
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
+                      ),
+                    _resultPanel(compact),
+                  ],
+                ),
               ),
             ),
           ),

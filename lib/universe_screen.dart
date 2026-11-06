@@ -4,8 +4,15 @@ import 'mobile_layout.dart';
 import 'style_selection.dart';
 
 class UniverseScreen extends StatefulWidget {
-  const UniverseScreen({super.key, this.initialEnglish = false});
+  const UniverseScreen({
+    super.key,
+    this.initialEnglish = false,
+    this.onSelected,
+    this.onBack,
+  });
   final bool initialEnglish;
+  final void Function(String gender, bool english)? onSelected;
+  final VoidCallback? onBack;
   @override
   State<UniverseScreen> createState() => _UniverseScreenState();
 }
@@ -13,6 +20,10 @@ class UniverseScreen extends StatefulWidget {
 class _UniverseScreenState extends State<UniverseScreen> {
   late bool english = widget.initialEnglish;
   void choose(String gender) {
+    if (widget.onSelected != null) {
+      widget.onSelected!(gender, english);
+      return;
+    }
     TryOnSession.current.selectGender(gender);
     Navigator.pushNamed(
       context,
@@ -49,7 +60,9 @@ class _UniverseScreenState extends State<UniverseScreen> {
                               _glassControl(
                                 child: IconButton(
                                   tooltip: english ? 'Back' : 'Retour',
-                                  onPressed: () => Navigator.maybePop(context),
+                                  onPressed:
+                                      widget.onBack ??
+                                      () => Navigator.maybePop(context),
                                   icon: const Icon(
                                     Icons.arrow_back,
                                     color: digiInk,

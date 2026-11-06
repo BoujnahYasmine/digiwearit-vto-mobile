@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "788742730808",
+    "project_id": "vto-with-nano",
+    "storage_bucket": "vto-with-nano.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:788742730808:android:7f4da01e495554534ba2cd",
+        "android_client_info": {
+          "package_name": "com.digiwearit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_bACNlBssYPtk82Nwa79XBnzSyN-15Ks"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:788742730808:android:38e77e435820289f4ba2cd",
+        "android_client_info": {
+          "package_name": "com.example.digiwearit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_bACNlBssYPtk82Nwa79XBnzSyN-15Ks"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
