@@ -22,7 +22,9 @@ sont déjà incluses.
    ```bash
    brew install cocoapods
    ```
-4. Installer **Flutter 3.41** (https://docs.flutter.dev/get-started/install/macos),
+4. Installer **Flutter 3.50 ou plus récent** (https://docs.flutter.dev/get-started/install/macos) —
+   obligatoire pour la détection du visage (ML Kit 1.x). Déjà installé ?
+   `flutter upgrade` ;
    puis vérifier :
    ```bash
    flutter doctor -v
@@ -35,7 +37,21 @@ sont déjà incluses.
 git clone https://github.com/BoujnahYasmine/digiwearit-vto-mobile.git
 cd digiwearit-vto-mobile
 flutter pub get
-cd ios && pod install && cd ..
+cd ios && pod install --repo-update && cd ..
+```
+
+La détection du visage (Google ML Kit 1.x, compatible Firebase 12+) passe
+par **Swift Package Manager** : il est activé dans `pubspec.yaml`, et Xcode
+télécharge le paquet `google-mlkit-swiftpm` à la première compilation. Le
+modèle `GoogleMVFaceDetectorResources.bundle` et les options de liaison
+`-ObjC -all_load` sont déjà dans le projet Xcode : rien à ajouter à la main.
+
+Projet déjà cloné sur le Mac ? Mettez-le à jour :
+
+```bash
+git pull origin master
+flutter clean && flutter pub get
+cd ios && rm -rf Pods Podfile.lock && pod install --repo-update && cd ..
 ```
 
 La première installation des pods prend plusieurs minutes.

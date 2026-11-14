@@ -297,27 +297,30 @@ class _DeliverySheetState extends State<DeliverySheet> {
                                           ? null
                                           : 'Veuillez saisir une adresse e-mail valide.',
                                     ),
-                                    CheckboxListTile(
-                                      key: const ValueKey('remember-email'),
-                                      value: remember,
-                                      onChanged: busy
-                                          ? null
-                                          : (v) => setState(
-                                              () => remember = v ?? true,
-                                            ),
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      controlAffinity:
-                                          ListTileControlAffinity.leading,
-                                      activeColor: const Color(0xff8245f6),
-                                      side: const BorderSide(
-                                        color: Colors.white54,
-                                      ),
-                                      title: const Text(
-                                        'Mémoriser mon e-mail sur ce téléphone',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 13,
+                                    Material(
+                                      type: MaterialType.transparency,
+                                      child: CheckboxListTile(
+                                        key: const ValueKey('remember-email'),
+                                        value: remember,
+                                        onChanged: busy
+                                            ? null
+                                            : (v) => setState(
+                                                () => remember = v ?? true,
+                                              ),
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                        activeColor: const Color(0xff8245f6),
+                                        side: const BorderSide(
+                                          color: Colors.white54,
+                                        ),
+                                        title: const Text(
+                                          'Mémoriser mon e-mail sur ce téléphone',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                       ),
                                     ),

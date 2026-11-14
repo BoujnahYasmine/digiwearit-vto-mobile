@@ -328,34 +328,39 @@ class _ProfileSheetState extends State<ProfileSheet> {
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: Colors.white24),
                               ),
-                              child: SwitchListTile(
-                                key: const ValueKey('profile-notifications'),
-                                value: p.notifications ?? false,
-                                activeThumbColor: const Color(0xffd2b8ff),
-                                secondary: const Icon(
-                                  Icons.notifications_active_outlined,
-                                  color: Color(0xffd2b8ff),
-                                ),
-                                title: const Text(
-                                  'Nouvelles tenues',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: SwitchListTile(
+                                  key: const ValueKey('profile-notifications'),
+                                  value: p.notifications ?? false,
+                                  activeThumbColor: const Color(0xffd2b8ff),
+                                  secondary: const Icon(
+                                    Icons.notifications_active_outlined,
+                                    color: Color(0xffd2b8ff),
                                   ),
-                                ),
-                                subtitle: const Text(
-                                  'Être prévenu(e) quand une tenue arrive.',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
+                                  title: const Text(
+                                    'Nouvelles tenues',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
                                   ),
+                                  subtitle: const Text(
+                                    'Être prévenu(e) quand une tenue arrive.',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onChanged: (on) async {
+                                    await p.setNotifications(on);
+                                    setState(() {});
+                                    await OutfitNotifications.instance.enable(
+                                      on,
+                                    );
+                                  },
                                 ),
-                                onChanged: (on) async {
-                                  await p.setNotifications(on);
-                                  setState(() {});
-                                  await OutfitNotifications.instance.enable(on);
-                                },
                               ),
                             ),
                             const SizedBox(height: 8),
