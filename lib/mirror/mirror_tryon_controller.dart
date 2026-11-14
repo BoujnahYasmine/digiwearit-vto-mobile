@@ -58,11 +58,11 @@ class MirrorTryOnError {
           kind: MirrorErrorKind.quota,
           message: Friendly.quota,
           code: 'AI_QUOTA_EXCEEDED',
-          backToOutfits: true,
         );
       case 'ENTERPRISE_SUSPENDED':
       case 'ENTERPRISE_NOT_ACTIVE':
       case 'MIRROR_SUSPENDED':
+      case 'MIRROR_DISABLED':
         return const MirrorTryOnError(
           kind: MirrorErrorKind.suspended,
           message: Friendly.servicePaused,
@@ -181,6 +181,7 @@ class MirrorTryOnController extends ChangeNotifier {
               name: catalogue.name,
               imageUrl: catalogue.imageUrl,
               gender: catalogue.gender,
+              flag: catalogue.flag,
               outfits: catalogue.outfits
                   .where((outfit) => outfit.matchesGender(_gender))
                   .toList(),
@@ -232,6 +233,7 @@ class MirrorTryOnController extends ChangeNotifier {
   Future<bool> loadContent({bool forceRefresh = false}) async {
     loadingContent = true;
     contentError = null;
+    creditsUsedUp = false;
     notifyListeners();
     try {
       if (!_sessionService.isAuthenticated) {
@@ -251,6 +253,7 @@ class MirrorTryOnController extends ChangeNotifier {
       state = MirrorTryOnState.selectingCatalogue;
       return true;
     } catch (error) {
+      creditsUsedUp = error is MirrorSessionException && error.creditsUsedUp;
       contentError = _sessionMessage(error);
       state = MirrorTryOnState.idle;
       return false;
@@ -309,7 +312,22 @@ class MirrorTryOnController extends ChangeNotifier {
   }) async {
     if (authRetried == false) {
       if (!_sessionService.isAuthenticated) {
-        final restored = await _sessionService.restore(silent: true);
+        final MirrorSession? restored;
+        try {
+          restored = await _sessionService.restore(silent: true);
+        } on MirrorSessionException catch (error) {
+          _fail(
+            error.creditsUsedUp
+                ? _creditsUsedUpError
+                : const MirrorTryOnError(
+                    kind: MirrorErrorKind.session,
+                    message: Friendly.mirrorReconnect,
+                    code: 'MIRROR_SESSION_REQUIRED',
+                    retryable: true,
+                  ),
+          );
+          return;
+        }
         if (restored == null) {
           _fail(
             const MirrorTryOnError(
@@ -345,7 +363,18 @@ class MirrorTryOnController extends ChangeNotifier {
       state = MirrorTryOnState.result;
     } on MirrorGenerationException catch (failure) {
       if (failure.code == 'MIRROR_SESSION_REQUIRED' && !authRetried) {
-        final refreshed = await _sessionService.refresh();
+        final MirrorSession? refreshed;
+        try {
+          refreshed = await _sessionService.refresh();
+        } on MirrorSessionException catch (error) {
+          _previousWasFinal = true;
+          _fail(
+            error.creditsUsedUp
+                ? _creditsUsedUpError
+                : MirrorTryOnError.fromGeneration(failure),
+          );
+          return;
+        }
         if (refreshed != null) {
           await _runGeneration(
             outfitId: outfitId,
@@ -442,10 +471,30 @@ class MirrorTryOnController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True when the collections could not open because the enterprise has no
+  /// try-on credits left (not a technical problem).
+  bool creditsUsedUp = false;
+
+  /// Customer-facing text: never an activation or technical message.
   String _sessionMessage(Object error) {
-    if (error is MirrorSessionException) return error.message;
-    return Friendly.mirrorReconnect;
+    if (error is! MirrorSessionException) return Friendly.mirrorReconnect;
+    return switch (error.reason) {
+      'AI_QUOTA_EXCEEDED' => Friendly.quota,
+      'ENTERPRISE_SUSPENDED' ||
+      'ENTERPRISE_NOT_ACTIVE' ||
+      'MIRROR_SUSPENDED' ||
+      'MIRROR_DISABLED' ||
+      'SUBSCRIPTION_EXPIRED' ||
+      'SUBSCRIPTION_SUSPENDED' => Friendly.servicePaused,
+      _ => Friendly.mirrorReconnect,
+    };
   }
+
+  static const _creditsUsedUpError = MirrorTryOnError(
+    kind: MirrorErrorKind.quota,
+    message: Friendly.quota,
+    code: 'AI_QUOTA_EXCEEDED',
+  );
 
   // Internals: whether the latest failed attempt had a confirmed outcome.
   bool _previousWasFinal = false;

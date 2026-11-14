@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../mobile_layout.dart';
+import 'mirror_access_state.dart';
 import 'mirror_backend.dart';
 import 'mirror_session_service.dart';
 import 'mirror_tryon_controller.dart';
@@ -43,6 +44,7 @@ class _MirrorSetupScreenState extends State<MirrorSetupScreen> {
       final ok = await controller.loadContent();
       if (!mounted) return;
       if (ok) {
+        MirrorAccessState.shared.grant();
         Navigator.of(
           context,
         ).pushNamedAndRemoveUntil('/mirror/universe', (route) => false);
@@ -72,17 +74,12 @@ class _MirrorSetupScreenState extends State<MirrorSetupScreen> {
       await authenticate(token);
       if (!mounted) return;
       _token.clear();
-      final ok = await controller.loadContent(forceRefresh: true);
-      if (!mounted) return;
-      if (ok) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/mirror/universe', (route) => false);
-      } else {
-        setState(
-          () => _error = controller.contentError ?? 'Chargement impossible.',
-        );
-      }
+      // The code was accepted: straight to the first try-on page. The
+      // collections load when the customer opens them.
+      MirrorAccessState.shared.grant();
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/mirror/universe', (route) => false);
     } on MirrorSessionException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
@@ -111,16 +108,13 @@ class _MirrorSetupScreenState extends State<MirrorSetupScreen> {
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      gradient: digiGradient,
-                    ),
-                    child: Image.asset('lib/logo digiwearit.png'),
+                  // The logo on its own, at a readable size (no square).
+                  Image.asset(
+                    'lib/logo digiwearit.png',
+                    key: const ValueKey('mirror-setup-logo'),
+                    width: 240,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 22),
                   const Text(
                     'Espace partenaire',
                     style: TextStyle(

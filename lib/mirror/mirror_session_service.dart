@@ -18,18 +18,29 @@ class MirrorSessionException implements Exception {
     'ENTERPRISE_SUSPENDED' =>
       'Cette entreprise est suspendue. Contactez Digiwearit.',
     'MIRROR_SUSPENDED' => 'Ce miroir est suspendu. Contactez Digiwearit.',
+    'MIRROR_DISABLED' =>
+      'Ce miroir est désactivé. Réactivez-le dans l’espace entreprise, rubrique « Mes miroirs ».',
     'SUBSCRIPTION_EXPIRED' ||
     'SUBSCRIPTION_SUSPENDED' => 'L’abonnement de cet espace a expiré.',
-    'AI_QUOTA_EXCEEDED' => 'Le quota d’essayages a été atteint.',
+    'AI_QUOTA_EXCEEDED' =>
+      'Les crédits d’essayage de cet espace sont épuisés. Demandez une recharge dans l’espace entreprise, rubrique « Mon abonnement ».',
     'MIRROR_LIMIT_REACHED' =>
       'Tous les miroirs autorisés par l’abonnement sont déjà activés. Contactez Digiwearit.',
     _ => 'Impossible de connecter l’espace partenaire.',
   };
 
+  bool get creditsUsedUp => reason == 'AI_QUOTA_EXCEEDED';
+
   bool get sessionExpired =>
       reason == 'MIRROR_SESSION_REQUIRED' ||
       reason == 'INVALID_MIRROR_TOKEN' ||
       reason == 'SESSION_EXPIRED';
+}
+
+/// The backend reason code carried by a callable failure.
+String? reasonOf(FirebaseFunctionsException error) {
+  final details = error.details;
+  return details is Map ? details['reason']?.toString() : error.message;
 }
 
 /// The authenticated mirror identity. Holds only operational, non-secret
@@ -120,6 +131,14 @@ class MirrorSessionService implements MirrorSessionGateway {
           .call<Map<String, dynamic>>();
       _session = MirrorSession.fromAuth(result.data);
       return _session;
+    } on FirebaseFunctionsException catch (error) {
+      _session = null;
+      // The mirror is still signed in; it just has no credits left. Say so
+      // instead of asking to reconnect it.
+      if (reasonOf(error) == 'AI_QUOTA_EXCEEDED') {
+        throw MirrorSessionException('AI_QUOTA_EXCEEDED');
+      }
+      return null;
     } on Object {
       _session = null;
       return null;
@@ -155,10 +174,7 @@ class MirrorSessionService implements MirrorSessionGateway {
       _session = session;
       return session;
     } on FirebaseFunctionsException catch (error) {
-      final reason = error.details is Map
-          ? (error.details as Map)['reason']?.toString()
-          : error.message;
-      throw MirrorSessionException(reason ?? 'UNKNOWN');
+      throw MirrorSessionException(reasonOf(error) ?? 'UNKNOWN');
     } on MirrorSessionException {
       rethrow;
     } on Object {

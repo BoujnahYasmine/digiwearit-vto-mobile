@@ -10,6 +10,8 @@ import 'full_photo_scene.dart';
 import 'classic_delivery_service.dart';
 import 'delivery_screen.dart';
 import 'rating_sheet.dart';
+import 'customer_profile.dart';
+import 'try_on_history.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({
@@ -36,6 +38,17 @@ class _ResultScreenState extends State<ResultScreen> {
   final sheet = DraggableScrollableController();
   double? extent;
   static const closedSheet = .12;
+
+  @override
+  void initState() {
+    super.initState();
+    CustomerProfile.instance.countTryOn();
+    TryOnHistory.instance.add(
+      id: widget.resultId,
+      outfit: widget.outfitName,
+      images: widget.images,
+    );
+  }
 
   @override
   void dispose() {
@@ -69,9 +82,28 @@ class _ResultScreenState extends State<ResultScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
+  /// After rating: back to the style categories, keeping the chosen gender.
+  void categories() {
+    TryOnSession.current.reset();
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/style',
+      (route) => route.isFirst,
+      arguments: StyleSelection(
+        gender: widget.selection.gender,
+        english: english,
+        style: widget.selection.style,
+      ),
+    );
+  }
+
   Future<void> rate() async {
     if (presenting) return;
+    final profile = await CustomerProfile.instance.load();
+    // The survey is asked once, after the very first try-on.
+    if (profile.rated || !mounted) return;
     presenting = true;
+    await profile.markRated();
+    if (!mounted) return;
     final choice = await showRatingSheet(
       context,
       tryOnId: widget.resultId,
@@ -82,7 +114,7 @@ class _ResultScreenState extends State<ResultScreen> {
     presenting = false;
     if (!mounted) return;
     if (choice == EndChoice.another) another();
-    if (choice == EndChoice.finish) finish();
+    if (choice == EndChoice.finish) categories();
   }
 
   Future<void> email() async {
@@ -170,53 +202,8 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           ),
                         ),
-                        _control(
-                          PopupMenuButton<bool>(
-                            tooltip: english ? 'Language' : 'Langue',
-                            initialValue: english,
-                            onSelected: (value) =>
-                                setState(() => english = value),
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: false,
-                                child: Text('Français'),
-                              ),
-                              PopupMenuItem(
-                                value: true,
-                                child: Text('English'),
-                              ),
-                            ],
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.language,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    english ? 'EN' : 'FR',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.expand_more,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        // Language is chosen on the home page only.
+                        const SizedBox(width: 48),
                       ],
                     ),
                   ),

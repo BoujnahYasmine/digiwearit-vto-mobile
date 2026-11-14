@@ -88,16 +88,15 @@ Future<Uint8List> smoothCapturedImage(
 
 /// Beauty areas in the detector's image space: the face skin for a light
 /// foundation (eyes, brows and lips left bare), plus — when [color] is on —
-/// the lips (outer outline minus the open mouth) and a soft oval per cheek.
+/// a soft blush oval per cheek. No lipstick: the lips keep their own color.
 class MakeupShapes {
-  const MakeupShapes(this.skin, this.lips, this.cheeks, this.faceWidth);
-  final Path skin, lips, cheeks;
+  const MakeupShapes(this.skin, this.cheeks, this.faceWidth);
+  final Path skin, cheeks;
   final double faceWidth;
 
   /// Same affine matrix as the skin mask (normalize, mirror, scale to view).
   MakeupShapes transform(Float64List matrix) => MakeupShapes(
     skin.transform(matrix),
-    lips.transform(matrix),
     cheeks.transform(matrix),
     faceWidth * matrix[0].abs(),
   );
@@ -143,15 +142,8 @@ MakeupShapes? makeupShapes({
     skin = Path.combine(PathOperation.difference, skin, bare);
   }
 
-  final lips = Path(), cheeks = Path();
+  final cheeks = Path();
   if (color) {
-    final mouth = upperLipBottom.length >= 3 && lowerLipTop.length >= 3
-        ? (Path()..addPolygon(ring(upperLipBottom, lowerLipTop), true))
-        : Path();
-    lips.addPath(
-      Path.combine(PathOperation.difference, outer, mouth),
-      Offset.zero,
-    );
     for (final (point, fallback) in [
       (leftCheek, Offset(bounds.left + w * .27, bounds.top + h * .64)),
       (rightCheek, Offset(bounds.left + w * .73, bounds.top + h * .64)),
@@ -165,14 +157,13 @@ MakeupShapes? makeupShapes({
       );
     }
   }
-  return MakeupShapes(skin, lips, cheeks, w);
+  return MakeupShapes(skin, cheeks, w);
 }
 
 const _foundation = Color(0x24F6DDCB);
 const _blush = Color(0x26F2708C);
-const _lipstick = Color(0x38C83A5C);
 
-/// Paints a light foundation, then blush and a sheer lipstick; shared by the
+/// Paints a light foundation, then blush; shared by the
 /// live preview and the photo.
 void paintMakeup(Canvas canvas, MakeupShapes shapes) {
   final soft = shapes.faceWidth;
@@ -188,14 +179,6 @@ void paintMakeup(Canvas canvas, MakeupShapes shapes) {
     Paint()
       ..color = _blush
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, soft * .06),
-  );
-  // Multiply keeps the lip texture and shading under the tint.
-  canvas.drawPath(
-    shapes.lips,
-    Paint()
-      ..color = _lipstick
-      ..blendMode = BlendMode.multiply
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, soft * .006),
   );
 }
 
@@ -220,6 +203,55 @@ Future<Uint8List> applyMakeupToImage(
       return encoded.buffer.asUint8List(
         encoded.offsetInBytes,
         encoded.lengthInBytes,
+      );
+    } finally {
+      output.dispose();
+    }
+  } finally {
+    picture.dispose();
+    original.dispose();
+  }
+}
+
+/// Skin smoothing and makeup in one GPU pass, returned as raw RGBA pixels so
+/// the photo is not re-encoded and decoded again before the review.
+Future<({Uint8List rgba, int width, int height})> retouchPixels(
+  Uint8List bytes, {
+  Path? mask,
+  double strength = 0,
+  MakeupShapes? makeup,
+}) async {
+  final codec = await ui.instantiateImageCodec(bytes);
+  final frame = await codec.getNextFrame();
+  codec.dispose();
+  final original = frame.image;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawImage(original, Offset.zero, Paint());
+  if (mask != null && !mask.getBounds().isEmpty && strength > 0) {
+    final sigma = smoothingSigma(original.width.toDouble(), strength);
+    canvas
+      ..save()
+      ..clipPath(mask)
+      ..drawImage(
+        original,
+        Offset.zero,
+        Paint()
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+      )
+      ..restore();
+  }
+  if (makeup != null) paintMakeup(canvas, makeup);
+  final picture = recorder.endRecording();
+  try {
+    final output = await picture.toImage(original.width, original.height);
+    try {
+      final data = await output.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (data == null) throw StateError('Could not read retouched photo');
+      return (
+        rgba: data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        width: output.width,
+        height: output.height,
       );
     } finally {
       output.dispose();

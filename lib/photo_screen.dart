@@ -5,9 +5,11 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'beauty_filter.dart';
 import 'photo_check.dart';
 import 'camera_service.dart';
+import 'capture_processing.dart';
 import 'outfit_selection.dart';
 import 'photo_review_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -23,7 +25,7 @@ class PhotoScreen extends StatefulWidget {
   });
   final OutfitSelection? selection;
 
-  /// Adds blush and a sheer lipstick to the beauty look; femme journeys only.
+  /// Adds a soft blush to the beauty look; femme journeys only.
   final bool makeup;
   final bool? english;
   final Future<void> Function(BuildContext, Uint8List) onContinue;
@@ -42,7 +44,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
 
   /// The built-in beauty look, always on with no customer choice: the
   /// "Éclat" light on every camera shot, plus on phones (face detection)
-  /// smoothing and a light foundation, with blush and lips for femme journeys.
+  /// smoothing and a light foundation, with blush for femme journeys.
   static const _beautyLevel = .5;
   Future<void> _stopFilter() {
     ++_filterEpoch;
@@ -97,7 +99,23 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   Timer? _countdownTimer;
   int _countdown = 0;
   bool _loading = false, _busy = false;
-  late bool _english = widget.english ?? widget.selection?.english ?? false;
+
+  /// Shutter feedback: the photo is taken (frozen frame, flash, vibration)
+  /// even while it is still being prepared for review.
+  bool _shot = false, _flash = false;
+  void _onShot() {
+    HapticFeedback.mediumImpact();
+    final camera = _camera;
+    if (camera != null) unawaited(camera.pausePreview().catchError((_) {}));
+    if (!mounted) return;
+    setState(() => _shot = _flash = true);
+    Future<void>.delayed(const Duration(milliseconds: 140), () {
+      if (mounted) setState(() => _flash = false);
+    });
+  }
+
+  late final bool _english =
+      widget.english ?? widget.selection?.english ?? false;
   String? _error;
   Uint8List? _photo;
   String t(String fr, String en) => _english ? en : fr;
@@ -216,37 +234,37 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
     setState(() => _busy = true);
     try {
       Uint8List bytes;
-      if (!gallery && _smoothing > 0) {
-        try {
-          bytes = await _faceSmoothing.capture();
-        } catch (error) {
-          // The beauty look is automatic, so a plain photo is taken quietly.
-          debugPrint('Beauty capture skipped: $error');
-          await _stopFilter();
-          bytes = await _cameraService.captureBytes(_camera!);
-        }
-      } else if (gallery) {
+      PhotoCheck? check;
+      if (gallery) {
         final file = await _cameraService.pickPhoto();
         if (file == null) return;
         bytes = await _cameraService.normalizedBytes(file);
-      } else {
-        bytes = await _cameraService.captureBytes(_camera!);
-      }
-      // Automatic light and camera-quality check, before Éclat brightens it.
-      PhotoCheck? check;
-      try {
-        check = await compute(checkPhoto, bytes);
-      } catch (error) {
-        debugPrint('Photo check skipped: $error');
-      }
-      if (!gallery) {
         try {
-          bytes = await compute(BeautyFilter.apply, bytes);
+          check = await compute(checkPhoto, bytes);
         } catch (error) {
-          debugPrint('Éclat filter skipped: $error');
+          debugPrint('Photo check skipped: $error');
         }
+      } else {
+        // One background pass prepares the photo (orientation, light check
+        // before Éclat, Éclat), so it shows right after the countdown.
+        ProcessedCapture? shot;
+        if (_smoothing > 0) {
+          try {
+            shot = await _faceSmoothing.captureForReview(onShot: _onShot);
+          } catch (error) {
+            // The beauty look is automatic, so a plain photo is taken quietly.
+            debugPrint('Beauty capture skipped: $error');
+            await _stopFilter();
+          }
+        }
+        shot ??= await _cameraService.captureForReview(
+          _camera!,
+          eclat: true,
+          onShot: _shot ? null : _onShot,
+        );
+        bytes = shot.bytes;
+        check = shot.check;
       }
-      await _stopFilter();
       if (!mounted) return;
       final live = _camera;
       _cancelCountdown();
@@ -257,8 +275,8 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         _error = null;
         _loading = false;
       });
-      await _release(live);
-      if (!mounted) return;
+      // The camera closes in the background: the photo does not wait for it.
+      unawaited(_stopFilter().then((_) => _release(live)));
       await Navigator.of(context).push(
         PageRouteBuilder<void>(
           transitionDuration: Duration.zero,
@@ -290,8 +308,11 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         );
       }
     } finally {
+      if (_shot && _camera != null) {
+        unawaited(_camera!.resumePreview().catchError((_) {}));
+      }
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() => _busy = _shot = _flash = false);
         if (_photo == null &&
             _camera == null &&
             !_loading &&
@@ -372,6 +393,13 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
               );
             },
           ),
+        IgnorePointer(
+          child: AnimatedOpacity(
+            opacity: _flash ? .85 : 0,
+            duration: Duration(milliseconds: _flash ? 40 : 220),
+            child: const ColoredBox(color: Colors.white),
+          ),
+        ),
         const IgnorePointer(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -425,67 +453,9 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                               ),
                             ),
                           ),
-                          _glass(
-                            PopupMenuButton<bool>(
-                              tooltip: t('Langue', 'Language'),
-                              initialValue: _english,
-                              onSelected: (value) =>
-                                  setState(() => _english = value),
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: false,
-                                  child: Text('Français'),
-                                ),
-                                PopupMenuItem(
-                                  value: true,
-                                  child: Text('English'),
-                                ),
-                              ],
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                child: Text(
-                                  _english ? 'EN' : 'FR',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            dark: true,
-                          ),
+                          // Language is chosen on the home page only.
+                          const SizedBox(width: 48),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      t('Placez-vous face à la caméra', 'Face the camera'),
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: compact ? 19 : 23,
-                        fontWeight: FontWeight.w600,
-                        shadows: const [
-                          Shadow(color: Colors.black54, blurRadius: 6),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      t(
-                        'Gardez votre corps entier dans le cadre',
-                        'Keep your whole body in the frame',
-                      ),
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
                       ),
                     ),
                     Expanded(
@@ -606,57 +576,6 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                       ),
-                    if (_camera != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _glass(
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
-                            ),
-                            child: Text(
-                              t(
-                                'Placez vos pieds dans la zone',
-                                'Place your feet in the marked area',
-                              ),
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: digiInk,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    _glass(
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 10,
-                          runSpacing: 3,
-                          children: [
-                            for (final label in [
-                              t('Corps entier', 'Full body'),
-                              t('Bonne lumière', 'Good light'),
-                              t('Visage naturel', 'Natural face'),
-                            ])
-                              Text(
-                                '✓ $label',
-                                style: const TextStyle(
-                                  color: digiInk,
-                                  fontSize: 10,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
                     SizedBox(height: compact ? 10 : 16),
                     Padding(
                       padding: EdgeInsets.only(bottom: compact ? 8 : 16),
@@ -692,7 +611,13 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                                     ? null
                                     : _beginCapture,
                                 padding: EdgeInsets.all(compact ? 19 : 24),
-                                icon: _busy
+                                icon: _shot
+                                    ? const Icon(
+                                        Icons.check_rounded,
+                                        color: Colors.white,
+                                        size: 32,
+                                      )
+                                    : _busy
                                     ? const SizedBox(
                                         width: 30,
                                         height: 30,

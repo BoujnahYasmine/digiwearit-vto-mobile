@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_language.dart';
 import '../mobile_layout.dart';
 import 'mirror_content.dart';
 import 'mirror_tryon_controller.dart';
@@ -13,7 +14,7 @@ class MirrorOutfitsScreen extends StatefulWidget {
 class _MirrorOutfitsScreenState extends State<MirrorOutfitsScreen> {
   late final c = widget.controller ?? MirrorTryOnController.current;
   String? selected;
-  bool english = false;
+  bool english = AppLanguage.english;
   @override
   void initState() {
     super.initState();
@@ -216,13 +217,7 @@ class _MirrorOutfitsScreenState extends State<MirrorOutfitsScreen> {
                             ),
                           ),
                           SizedBox(height: gap),
-                          const Text(
-                            'D R E S S  Y O U R S E L F  D I F F E R E N T L Y',
-                            style: TextStyle(
-                              fontSize: 8,
-                              color: Color(0xff9c7aac),
-                            ),
-                          ),
+                          const DigiSlogan(color: Color(0xff9c7aac)),
                           SizedBox(height: gap),
                         ],
                       ),

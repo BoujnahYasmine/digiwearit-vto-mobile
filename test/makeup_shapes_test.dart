@@ -39,12 +39,12 @@ void main() {
     expect(skin.contains(const Offset(5, 10)), isFalse); // outside face
   });
 
-  test('lipstick covers the lips but not the open mouth or the chin', () {
-    final lips = shapes()!.lips;
-    expect(lips.contains(const Offset(100, 185)), isTrue);
-    expect(lips.contains(const Offset(100, 208)), isTrue);
-    expect(lips.contains(const Offset(100, 199)), isFalse);
-    expect(lips.contains(const Offset(100, 230)), isFalse);
+  test('no lipstick: nothing is painted on the lips', () {
+    final look = shapes()!;
+    for (final lip in const [Offset(100, 185), Offset(100, 208)]) {
+      expect(look.skin.contains(lip), isFalse);
+      expect(look.cheeks.contains(lip), isFalse);
+    }
   });
 
   test('blush sits on both cheeks, away from the nose', () {
@@ -56,7 +56,6 @@ void main() {
 
   test('without color (homme) only the foundation remains', () {
     final plain = shapes(color: false)!;
-    expect(plain.lips.getBounds().isEmpty, isTrue);
     expect(plain.cheeks.getBounds().isEmpty, isTrue);
     expect(plain.skin.contains(const Offset(50, 160)), isTrue);
   });

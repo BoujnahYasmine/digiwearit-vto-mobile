@@ -22,6 +22,14 @@ abstract final class BeautyFilter {
   static Uint8List apply(Uint8List source) {
     final decoded = image.decodeImage(source);
     if (decoded == null) throw const FormatException('Unsupported image data');
+    applyTo(decoded);
+    // Always JPEG: a camera photo needs no transparency, and a 1080p PNG
+    // (from the smoothing/makeup step) would be several times heavier.
+    return Uint8List.fromList(image.encodeJpg(decoded, quality: 92));
+  }
+
+  /// Blends already decoded pixels in place (no decode or encode).
+  static void applyTo(image.Image decoded) {
     const keep = 1 - _strength;
     const r = _lightR * _strength;
     const g = _lightG * _strength;
@@ -32,8 +40,5 @@ abstract final class BeautyFilter {
         ..g = (pixel.g * keep + g).round().clamp(0, 255)
         ..b = (pixel.b * keep + b).round().clamp(0, 255);
     }
-    // Always JPEG: a camera photo needs no transparency, and a 1080p PNG
-    // (from the smoothing/makeup step) would be several times heavier.
-    return Uint8List.fromList(image.encodeJpg(decoded, quality: 92));
   }
 }

@@ -16,6 +16,17 @@ class MirrorAccessState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The backend has just accepted this mirror (activation code or session
+  /// restore): partner pages open at once, without a separate check. The
+  /// periodic re-check still runs in the background.
+  void grant() {
+    _version++;
+    allowed = true;
+    checking = false;
+    error = null;
+    notifyListeners();
+  }
+
   Future<void> check(Future<void> Function() verify) async {
     if (checking) return;
     final version = _version;

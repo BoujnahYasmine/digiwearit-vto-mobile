@@ -1,3 +1,4 @@
+import 'app_language.dart';
 import 'try_on_session.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -10,11 +11,12 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  bool english = false;
+  bool english = AppLanguage.english;
   void open({required bool partner}) {
     // Any mode entry starts from a clean try-on state: no customer media,
     // generation or payment state survives a mode switch.
     TryOnSession.current.reset();
+    AppLanguage.english = english;
     Navigator.pushNamed(
       context,
       partner ? '/mirror' : '/universe',
@@ -94,8 +96,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               child: PopupMenuButton<bool>(
                                 tooltip: english ? 'Language' : 'Langue',
                                 initialValue: english,
-                                onSelected: (value) =>
-                                    setState(() => english = value),
+                                onSelected: (value) => setState(
+                                  () => AppLanguage.english = english = value,
+                                ),
                                 itemBuilder: (_) => const [
                                   PopupMenuItem(
                                     value: false,
@@ -139,9 +142,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       SizedBox(height: compact ? 18 : 30),
                       Text(
-                        english
-                            ? 'AI VIRTUAL TRY-ON'
-                            : 'ESSAYAGE VIRTUEL PAR IA',
+                        english ? 'VIRTUAL TRY-ON' : 'ESSAYAGE VIRTUEL',
                         style: TextStyle(
                           color: const Color(0xff9783ac),
                           letterSpacing: 3,
@@ -154,8 +155,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 22),
                         child: Text(
                           english
-                              ? 'Discover outfits that feel like you'
-                              : 'Découvrez des tenues\nqui vous ressemblent',
+                              ? 'Discover the outfits of every culture'
+                              : 'Découvrez les tenues\nde chaque culture',
                           textAlign: TextAlign.center,
                           maxLines: 3,
                           style: TextStyle(
@@ -168,68 +169,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 9),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 30),
-                        child: Text(
-                          english
-                              ? 'Tradition, modernity and innovation.\nTry it on in an instant.'
-                              : 'Tradition, modernité et innovation,\nessayez en un instant.',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          style: TextStyle(
-                            color: const Color(0xff9783ac),
-                            fontSize: wide ? 20 : 13,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              if (!compact)
-                                Text(
-                                  'Try\nYour Next\nLook ♡',
-                                  style: TextStyle(
-                                    fontFamily: 'Georgia',
-                                    fontFamilyFallback: const ['serif'],
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: wide ? 30 : 19,
-                                    color: Colors.white,
-                                    height: 1.25,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        blurRadius: 10,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              const Spacer(),
-                              if (!compact)
-                                Text(
-                                  'TRADITION\nMEETS\nTOMORROW\n——',
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    letterSpacing: 3,
-                                    height: 2,
-                                    fontSize: wide ? 13 : 9,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      // The photo shows through here.
+                      const Spacer(),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: ClipRRect(
@@ -291,17 +232,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   ),
                                   if (!compact) ...[
                                     const SizedBox(height: 26),
-                                    const FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        '—  DRESS YOURSELF DIFFERENTLY  —',
-                                        style: TextStyle(
-                                          color: Color(0xffaa92ba),
-                                          letterSpacing: 3,
-                                          fontSize: 9,
-                                        ),
-                                      ),
-                                    ),
+                                    const DigiSlogan(color: Color(0xffaa92ba)),
                                   ],
                                 ],
                               ),

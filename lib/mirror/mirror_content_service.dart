@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import 'mirror_backend.dart';
 import 'mirror_content.dart';
+import '../outfit.dart' show validFlag;
 import 'mirror_session_service.dart';
 
 /// Gateway used by the try-on controller; content is loaded through this
@@ -23,9 +24,14 @@ class MirrorContentService implements MirrorContentGateway {
 
   @override
   Future<MirrorContent> load() async {
-    final result = await _functions
-        .httpsCallable('getMirrorContent')
-        .call<Map<String, dynamic>>();
+    final HttpsCallableResult<Map<String, dynamic>> result;
+    try {
+      result = await _functions
+          .httpsCallable('getMirrorContent')
+          .call<Map<String, dynamic>>();
+    } on FirebaseFunctionsException catch (error) {
+      throw MirrorSessionException(reasonOf(error) ?? 'UNKNOWN');
+    }
     final data = result.data;
     final enterprise = (data['enterprise'] as Map? ?? {})
         .cast<String, dynamic>();
@@ -47,6 +53,7 @@ class MirrorContentService implements MirrorContentGateway {
               name: catalog['name'] as String? ?? '',
               imageUrl: catalog['imageUrl'] as String?,
               gender: catalog['gender'] as String?,
+              flag: validFlag(catalog['flag']),
               outfits: outfits
                   .whereType<Map>()
                   .map((rawOutfit) {

@@ -92,13 +92,12 @@ void main() {
             .map((o) => o.id),
         ['af'],
       );
-      await tester.tap(find.byKey(const ValueKey('mirror-catalogue-continue')));
-      await tester.pumpAndSettle();
-      expect(find.text('Enterprise outfits'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('mirror-catalogue-continue')),
+        findsNothing,
+        reason: 'one tap on a style is enough',
+      );
       await tester.tap(find.byKey(const ValueKey('mirror-catalogue-women')));
-      await tester.pumpAndSettle();
-      expect(find.text('Enterprise outfits'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('mirror-catalogue-continue')));
       await tester.pumpAndSettle();
       expect(controller.selectedCatalogueId, 'women');
       expect(controller.selectedCatalogue!.outfits.single.id, 'f');

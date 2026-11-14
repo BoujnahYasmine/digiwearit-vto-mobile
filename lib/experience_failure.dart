@@ -21,8 +21,9 @@ abstract final class Friendly {
       'Votre essayage n’a pas pu être finalisé cette fois ✨ Réessayons, cela ne prend que quelques secondes.';
   static const outfitUnavailable =
       'Cette tenue vient de quitter la collection 👗 Choisissez-en une autre, il y a plein d’autres coups de cœur !';
-  static const quota =
-      'Tous les essayages du moment ont été utilisés ✨ Un conseiller peut vous aider à continuer.';
+  static const quota = 'Les essayages virtuels sont complets pour le moment ✨';
+  static const quotaHelp =
+      'Merci pour votre visite ! Un conseiller de la boutique se fera un plaisir de vous accompagner pour essayer vos coups de cœur.';
   static const servicePaused =
       'L’essayage virtuel fait une petite pause ici 🙂 Un conseiller peut vous aider.';
   static const mirrorReconnect =

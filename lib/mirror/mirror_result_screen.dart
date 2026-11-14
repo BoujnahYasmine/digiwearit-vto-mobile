@@ -85,7 +85,8 @@ class _MirrorResultScreenState extends State<MirrorResultScreen> {
     setState(() => presenting = false);
     if (choice == EndChoice.another) {
       _tryAnotherOutfit();
-    } else if (choice == EndChoice.finish) {
+    } else {
+      // Terminer, or the survey closed with X: the mirror goes home.
       _returnHome();
     }
   }

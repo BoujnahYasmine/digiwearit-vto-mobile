@@ -89,8 +89,7 @@ class _AdminDashboard extends StatelessWidget {
                       collection: 'outfits',
                       icon: Icons.checkroom_rounded,
                       title: 'Tenues',
-                      description:
-                          'Ajouter les images et regler la generation IA.',
+                      description: 'Ajouter les images et regler l essayage.',
                       color: Color(0xffff5c91),
                       onTap: () => Navigator.push(
                         context,
@@ -125,7 +124,7 @@ class _AdminDashboard extends StatelessWidget {
                             icon: Icons.checkroom_rounded,
                             title: 'Tenues',
                             description:
-                                'Ajouter les images et regler la generation IA.',
+                                'Ajouter les images et regler l essayage.',
                             color: Color(0xffff5c91),
                             onTap: () => Navigator.push(
                               context,

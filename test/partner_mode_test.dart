@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:digiwearit2/outfit_selection.dart';
 import 'package:digiwearit2/try_on_session.dart';
 import 'package:digiwearit2/welcome_screen.dart';
+import 'package:digiwearit2/mirror/mirror_access_state.dart';
 import 'package:digiwearit2/mirror/mirror_content.dart';
 import 'package:digiwearit2/mirror/mirror_content_service.dart';
 import 'package:digiwearit2/mirror/mirror_generation_service.dart';
@@ -233,8 +234,10 @@ void main() {
     });
 
     testWidgets(
-      'content load failure after activation is visible and clears the token',
+      'an accepted code opens the first page at once; the collections load '
+      'later, on their own page',
       (tester) async {
+        MirrorAccessState.shared.reset();
         final session = FakeSession(authenticated: false);
         final controller = MirrorTryOnController(
           sessionService: session,
@@ -255,6 +258,10 @@ void main() {
                 );
               },
             ),
+            routes: {
+              '/mirror/universe': (_) =>
+                  const Scaffold(body: Text('Choose model')),
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -264,17 +271,12 @@ void main() {
         );
         await tester.tap(find.byKey(const ValueKey('mirror-connect')));
         await tester.pumpAndSettle();
+        // No content call and no separate access check before the first page.
+        expect(find.text('Choose model'), findsOneWidget);
+        expect(MirrorAccessState.shared.allowed, isTrue);
+        // The collections page reports a loading problem itself.
+        expect(await controller.loadContent(forceRefresh: true), isFalse);
         expect(controller.contentError, isNotNull);
-        expect(find.text(controller.contentError!), findsOneWidget);
-        expect(
-          tester
-              .widget<TextField>(
-                find.byKey(const ValueKey('mirror-token-field')),
-              )
-              .controller!
-              .text,
-          isEmpty,
-        );
       },
     );
 
@@ -397,10 +399,7 @@ void main() {
         controller.selectOutfit('o1');
         await controller.confirmPhoto(Uint8List(1));
         expect(controller.error?.kind, MirrorErrorKind.quota);
-        expect(
-          controller.error?.message,
-          Friendly.quota,
-        );
+        expect(controller.error?.message, Friendly.quota);
       },
     );
 

@@ -122,46 +122,8 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
                           ),
                         ),
                       ),
-                      _glass(
-                        PopupMenuButton<bool>(
-                          tooltip: english ? 'Language' : 'Langue',
-                          initialValue: english,
-                          onSelected: (value) =>
-                              setState(() => english = value),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: false,
-                              child: Text('Français'),
-                            ),
-                            PopupMenuItem(value: true, child: Text('English')),
-                          ],
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  english ? 'EN' : 'FR',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        blur: 12,
-                        opacity: .15,
-                      ),
+                      // Language is chosen on the home page only.
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),

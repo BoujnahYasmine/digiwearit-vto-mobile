@@ -22,6 +22,41 @@ class DigiGlass extends StatelessWidget {
   );
 }
 
+/// The Digiwearit slogan, centred at the bottom of the pages.
+class DigiSlogan extends StatelessWidget {
+  const DigiSlogan({
+    super.key,
+    this.color = const Color(0xffa68eba),
+    this.fontSize = 9,
+  });
+  static const text = '—  DIGITALLY WEAR IT  —';
+  static const _spacing = 3.0;
+  final Color color;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Padding(
+        // Letter spacing also follows the last character: balance it so
+        // the slogan sits exactly in the middle.
+        padding: const EdgeInsets.only(left: _spacing),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            letterSpacing: _spacing,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class DigiButton extends StatelessWidget {
   const DigiButton({
     super.key,
@@ -184,4 +219,71 @@ class PhotoBackdrop extends StatelessWidget {
       const ColoredBox(color: Color(0x66532561)),
     ],
   );
+}
+
+/// Rotating loading ring drawn entirely with the Digiwearit gradient.
+class DigiSpinner extends StatefulWidget {
+  const DigiSpinner({super.key, this.size = 82, this.strokeWidth = 5});
+  final double size;
+  final double strokeWidth;
+  @override
+  State<DigiSpinner> createState() => _DigiSpinnerState();
+}
+
+class _DigiSpinnerState extends State<DigiSpinner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: widget.size,
+    child: RotationTransition(
+      turns: _spin,
+      child: CustomPaint(painter: _DigiRingPainter(widget.strokeWidth)),
+    ),
+  );
+}
+
+class _DigiRingPainter extends CustomPainter {
+  const _DigiRingPainter(this.stroke);
+  final double stroke;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(stroke / 2);
+    const sweep = 4.6; // radians (~265°), leaves a small gap
+    canvas.drawCircle(
+      rect.center,
+      rect.width / 2,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = const Color(0x338245f6),
+    );
+    canvas.drawArc(
+      rect,
+      0,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..shader = const SweepGradient(
+          endAngle: sweep,
+          colors: [Color(0xff245cff), Color(0xff8245f6), Color(0xfffa4ca7)],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DigiRingPainter old) => old.stroke != stroke;
 }

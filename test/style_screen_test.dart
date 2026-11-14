@@ -53,7 +53,7 @@ void main() {
   });
 
   for (final size in phones) {
-    testWidgets('style CTA visible and choices carried at $size', (
+    testWidgets('one tap on a style opens its outfits at $size', (
       tester,
     ) async {
       viewport(tester, size);
@@ -71,9 +71,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      visible(tester, find.byKey(const ValueKey('style-continue')));
+      expect(find.text('Continuer'), findsNothing, reason: 'no button needed');
+      visible(tester, find.byKey(const ValueKey('style-Espagnol')));
       await tester.tap(find.byKey(const ValueKey('style-Espagnol')));
-      await tester.tap(find.byKey(const ValueKey('style-continue')));
       await tester.pumpAndSettle();
       expect(selection!.style, 'Espagnol');
       expect(selection!.gender, 'homme');

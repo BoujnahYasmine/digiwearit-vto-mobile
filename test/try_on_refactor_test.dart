@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_ai/firebase_ai.dart';
 import 'package:digiwearit2/main.dart';
 import 'package:digiwearit2/outfit_repository.dart';
 import 'package:digiwearit2/outfit_selection.dart';
@@ -37,7 +37,7 @@ void main() {
       );
     },
   );
-  test('all reference images and user bytes reach model payload', () async {
+  test('outfit id and user bytes reach the generation function', () async {
     final outfit = Outfit.fromFirestore('regional', {
       'name': 'Ait Baamrane',
       'gender': 'femme',
@@ -49,25 +49,37 @@ void main() {
       'imageUrls': ['old.jpg'],
     });
     final bytes = Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]);
-    final urls = <String>[];
+    Map<String, dynamic>? sent;
     final service = NanoBananaService(
-      imageLoader: (url) async {
-        urls.add(url);
-        return InlineDataPart('image/png', Uint8List.fromList([9]));
+      call: (data) async {
+        sent = data;
+        return {
+          'images': [
+            base64Encode([7, 8]),
+          ],
+        };
       },
     );
-    final parts = await service.buildInput(
+    final images = await service.generate(
       TryOnRequest(
         userPhotoBytes: bytes,
         outfit: outfit,
         gender: 'femme',
         style: 'Marocain',
         category: 'Ait Baamrane',
+        preferredColorName: 'bleu',
       ),
     );
-    expect(urls, ['reference.png', 'old.jpg']);
-    expect(parts.whereType<InlineDataPart>().first.bytes, same(bytes));
-    expect(parts.whereType<TextPart>().first.text, contains('Ait Baamrane'));
+    expect(sent!['outfitId'], 'regional');
+    expect(base64Decode(sent!['customerImage'] as String), bytes);
+    expect(sent!['category'], 'Ait Baamrane');
+    expect(sent!['preferredColorName'], 'bleu');
+    expect(
+      sent!.keys,
+      isNot(contains('promptImageUrl')),
+      reason: 'server reads the outfit',
+    );
+    expect(images.single, [7, 8]);
     expect(
       OutfitRepository.filter(
         [outfit],

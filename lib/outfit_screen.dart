@@ -100,6 +100,12 @@ class _OutfitScreenState extends State<OutfitScreen> {
     super.dispose();
   }
 
+  /// One tap on an outfit (card or its button) opens the try-on.
+  Future<void> tryOn(String type) async {
+    setState(() => selected = type);
+    await next();
+  }
+
   Future<void> next() async {
     final models = collection.where((o) => outfitType(o) == selected).toList();
     if (models.isEmpty) return;
@@ -161,60 +167,16 @@ class _OutfitScreenState extends State<OutfitScreen> {
                                   ),
                                 ),
                               ),
-                              _glass(
-                                PopupMenuButton<bool>(
-                                  tooltip: english ? 'Language' : 'Langue',
-                                  initialValue: english,
-                                  onSelected: (value) =>
-                                      setState(() => english = value),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: false,
-                                      child: Text('Français'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: true,
-                                      child: Text('English'),
-                                    ),
-                                  ],
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.language,
-                                          color: digiInk,
-                                          size: 19,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          english ? 'EN' : 'FR',
-                                          style: const TextStyle(
-                                            color: digiInk,
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down,
-                                          size: 16,
-                                          color: digiInk,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Language is chosen on the home page only.
+                              const SizedBox(width: 48),
                             ],
                           ),
                         ),
                         SizedBox(height: gap),
                         Semantics(
                           label: english
-                              ? 'Choose a category'
-                              : 'Choix de la catégorie',
+                              ? 'Choose an outfit'
+                              : 'Choix de la tenue',
                           child: SizedBox(
                             width: wide ? 270 : 150,
                             child: Row(
@@ -241,9 +203,7 @@ class _OutfitScreenState extends State<OutfitScreen> {
                         ),
                         SizedBox(height: gap),
                         Text(
-                          english
-                              ? 'Choose a category'
-                              : 'Choisissez une catégorie',
+                          english ? 'Choose an outfit' : 'Choisissez une tenue',
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           style: TextStyle(
@@ -269,45 +229,12 @@ class _OutfitScreenState extends State<OutfitScreen> {
                           ),
                         ),
                         SizedBox(height: gap),
-                        Expanded(child: _catalogue(wide)),
-                        SizedBox(height: gap),
-                        Stack(
-                          alignment: Alignment.centerRight,
-                          children: [
-                            DigiButton(
-                              key: const ValueKey('outfit-continue'),
-                              label: english ? 'Continue' : 'Continuer',
-                              onPressed: loading || error || selected == null
-                                  ? null
-                                  : next,
-                            ),
-                            const IgnorePointer(
-                              child: Padding(
-                                padding: EdgeInsets.only(right: 18),
-                                child: Icon(
-                                  Icons.arrow_forward,
-                                  color: Colors.white,
-                                  size: 23,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        Expanded(child: _catalogue(wide, gap)),
                         Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: compact ? 12 : 22,
                           ),
-                          child: const FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '—  DRESS YOURSELF DIFFERENTLY  —',
-                              style: TextStyle(
-                                color: Color(0xffa68eba),
-                                fontSize: 9,
-                                letterSpacing: 3,
-                              ),
-                            ),
-                          ),
+                          child: const DigiSlogan(),
                         ),
                       ],
                     ),
@@ -329,7 +256,7 @@ class _OutfitScreenState extends State<OutfitScreen> {
     child: child,
   );
 
-  Widget _catalogue(bool wide) {
+  Widget _catalogue(bool wide, double gap) {
     if (loading) return const Center(child: CircularProgressIndicator());
     if (error) {
       return Center(
@@ -361,24 +288,17 @@ class _OutfitScreenState extends State<OutfitScreen> {
       );
     }
     return LayoutBuilder(
-      builder: (context, box) {
-        final rows = ((categories.length + 1) ~/ 2).clamp(1, 3);
-        final extent = ((box.maxHeight - (rows - 1) * 12) / rows).clamp(
-          130.0,
-          box.maxHeight.clamp(130.0, double.infinity),
-        );
-        return GridView.builder(
-          padding: const EdgeInsets.all(3),
-          itemCount: categories.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: extent - 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 10,
-          ),
-          itemBuilder: (context, index) => _card(categories[index], wide),
-        );
-      },
+      builder: (context, box) => GridView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: categories.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: gap,
+          mainAxisSpacing: gap,
+          mainAxisExtent: ((box.maxHeight - gap) / 2).clamp(140.0, 420.0),
+        ),
+        itemBuilder: (context, index) => _card(categories[index], wide),
+      ),
     );
   }
 
@@ -415,6 +335,30 @@ class _OutfitScreenState extends State<OutfitScreen> {
     );
   }
 
+  /// The card's own "Essayer" button: chooses this outfit and opens the
+  /// try-on (camera) right away.
+  Widget _tryOnButton(String type, bool wide) => DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: digiGradient,
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: TextButton.icon(
+      key: ValueKey('try-on-$type'),
+      onPressed: () => tryOn(type),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        minimumSize: Size(0, wide ? 44 : 34),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: Icon(Icons.auto_awesome, size: wide ? 20 : 15),
+      label: Text(
+        english ? 'Try on' : 'Essayer',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: wide ? 16 : 13),
+      ),
+    ),
+  );
+
   Widget _card(Outfit outfit, bool wide) {
     final type = outfitType(outfit);
     final active = selected == type;
@@ -424,108 +368,95 @@ class _OutfitScreenState extends State<OutfitScreen> {
       selected: active,
       label: type,
       child: Container(
-        padding: const EdgeInsets.all(2.5),
+        padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           gradient: active ? digiGradient : null,
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(26),
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: const Color(0xffac6afa).withValues(alpha: .3),
-                    blurRadius: 8,
+                    color: const Color(0xffae6aff).withValues(alpha: .4),
+                    blurRadius: 10,
                   ),
                 ]
               : null,
         ),
         child: Material(
-          color: const Color(0xffeee7ec),
-          borderRadius: BorderRadius.circular(22),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(23),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             key: ValueKey('category-$type'),
-            onTap: () => setState(() => selected = type),
-            child: Column(
+            onTap: () => tryOn(type),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CataloguePhoto(outfit: outfit),
-                      if (active)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: wide ? 46 : 30,
-                            height: wide ? 46 : 30,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: digiGradient,
-                            ),
-                            child: Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: wide ? 32 : 23,
-                            ),
-                          ),
-                        ),
-                    ],
+                CataloguePhoto(outfit: outfit),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [.35, 1],
+                      colors: [Colors.transparent, Color(0xee221a35)],
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: wide ? 14 : 8,
-                    vertical: wide ? 14 : 8,
+                if (active)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      width: wide ? 46 : 30,
+                      height: wide ? 46 : 30,
+                      decoration: BoxDecoration(
+                        gradient: digiGradient,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: wide ? 30 : 21,
+                      ),
+                    ),
                   ),
-                  child: Row(
+                Positioned(
+                  left: wide ? 16 : 9,
+                  right: wide ? 16 : 9,
+                  bottom: wide ? 14 : 9,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (wide) ...[
-                        Icon(details.$2, color: digiInk, size: 29),
-                        const SizedBox(width: 12),
+                        Icon(details.$2, color: Colors.white, size: 28),
+                        const SizedBox(height: 4),
                       ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              type,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: digiInk,
-                                fontWeight: FontWeight.w600,
-                                fontSize: wide ? 20 : 14,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              details.$1,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: const Color(0xff89759d),
-                                fontSize: wide ? 14 : 10,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        type,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Georgia',
+                          fontFamilyFallback: const ['serif'],
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: wide ? 26 : 17,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Container(
-                        width: wide ? 42 : 27,
-                        height: wide ? 42 : 27,
-                        decoration: BoxDecoration(
-                          color: Colors.white54,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xffe0d5e4)),
-                        ),
-                        child: Icon(
-                          Icons.chevron_right,
-                          color: digiInk,
-                          size: wide ? 27 : 20,
+                      const SizedBox(height: 2),
+                      Text(
+                        details.$1,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .85),
+                          fontSize: wide ? 14 : 10,
                         ),
                       ),
+                      SizedBox(height: wide ? 10 : 6),
+                      _tryOnButton(type, wide),
                     ],
                   ),
                 ),

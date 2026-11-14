@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'experience_session.dart';
 import 'experience_failure.dart';
 import 'mobile_layout.dart';
+import 'customer_profile.dart';
 
 Future<bool?> showDeliverySheet(
   BuildContext context, {
@@ -37,7 +38,17 @@ class DeliverySheet extends StatefulWidget {
 class _DeliverySheetState extends State<DeliverySheet> {
   final email = TextEditingController();
   final form = GlobalKey<FormState>();
-  bool busy = false, sent = false;
+  bool busy = false, sent = false, remember = true;
+  @override
+  void initState() {
+    super.initState();
+    CustomerProfile.instance.load().then((profile) {
+      if (mounted && email.text.isEmpty && profile.email.isNotEmpty) {
+        setState(() => email.text = profile.email);
+      }
+    });
+  }
+
   String? error;
   bool get available => ExperienceApi.configured || widget.sender != null;
   bool get validEmail =>
@@ -64,6 +75,9 @@ class _DeliverySheetState extends State<DeliverySheet> {
         widget.bytes,
         widget.resultId,
       );
+      if (remember) {
+        await CustomerProfile.instance.update(email: email.text.trim());
+      }
       if (mounted) setState(() => sent = true);
     } catch (e) {
       if (mounted) {
@@ -107,7 +121,7 @@ class _DeliverySheetState extends State<DeliverySheet> {
               child: Column(
                 children: [
                   SizedBox(
-                    height: 34,
+                    height: 48,
                     child: Stack(
                       alignment: Alignment.topCenter,
                       children: [
@@ -128,9 +142,8 @@ class _DeliverySheetState extends State<DeliverySheet> {
                             style: IconButton.styleFrom(
                               backgroundColor: Colors.white12,
                             ),
-                            onPressed: busy
-                                ? null
-                                : () => Navigator.pop(context),
+                            onPressed: () =>
+                                Navigator.pop(context, sent ? true : null),
                             icon: const Icon(
                               Icons.close,
                               color: Colors.white,
@@ -283,6 +296,30 @@ class _DeliverySheetState extends State<DeliverySheet> {
                                       validator: (_) => validEmail
                                           ? null
                                           : 'Veuillez saisir une adresse e-mail valide.',
+                                    ),
+                                    CheckboxListTile(
+                                      key: const ValueKey('remember-email'),
+                                      value: remember,
+                                      onChanged: busy
+                                          ? null
+                                          : (v) => setState(
+                                              () => remember = v ?? true,
+                                            ),
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                      activeColor: const Color(0xff8245f6),
+                                      side: const BorderSide(
+                                        color: Colors.white54,
+                                      ),
+                                      title: const Text(
+                                        'Mémoriser mon e-mail sur ce téléphone',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                        ),
+                                      ),
                                     ),
                                     if (!available)
                                       const Padding(

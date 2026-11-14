@@ -15,6 +15,10 @@ String normalizedGender(String value) {
   }
 }
 
+/// A two-letter country code, or null.
+String? validFlag(Object? value) =>
+    value is String && RegExp(r'^[A-Z]{2}$').hasMatch(value) ? value : null;
+
 class LookCategory {
   const LookCategory({
     required this.id,
@@ -23,12 +27,17 @@ class LookCategory {
     required this.active,
     this.imageUrl = '',
     this.description = '',
+    this.flag,
   });
   final String id;
   final String name;
   final String gender;
   final bool active;
   final String imageUrl, description;
+
+  /// Country flag chosen in the admin: a code like MA, '' when the admin
+  /// chose none, null when never set (the app then uses its default).
+  final String? flag;
 
   factory LookCategory.fromFirestore(String id, Map<String, dynamic> data) =>
       LookCategory(
@@ -38,6 +47,7 @@ class LookCategory {
         active: data['active'] != false,
         imageUrl: data['imageUrl'] as String? ?? '',
         description: data['description'] as String? ?? '',
+        flag: !data.containsKey('flag') ? null : validFlag(data['flag']) ?? '',
       );
 }
 

@@ -355,7 +355,7 @@ class _OutfitManagementScreenState extends State<OutfitManagementScreen> {
                                   style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: const Text(
-                                  'Autoriser l IA a adapter ou ajouter du maquillage.',
+                                  'Autoriser un maquillage leger.',
                                 ),
                                 value: makeupAllowed,
                                 onChanged: saving

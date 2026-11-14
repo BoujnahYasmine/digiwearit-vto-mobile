@@ -34,12 +34,16 @@ class MirrorCatalogue {
     required this.name,
     this.imageUrl,
     this.gender,
+    this.flag,
     this.outfits = const [],
   });
   final String id;
   final String name;
   final String? imageUrl;
   final String? gender;
+
+  /// Country flag code (e.g. MA) chosen by the enterprise, if any.
+  final String? flag;
   final List<MirrorOutfit> outfits;
 }
 

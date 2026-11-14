@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show compute, defaultTargetPlatform;
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'face_smoothing_mask.dart';
 import 'camera_service.dart';
+import 'capture_processing.dart';
 import 'image_orientation_normalizer.dart';
 import 'photo_check.dart';
 
@@ -30,7 +31,7 @@ class FaceSmoothing {
   double _strength = 0;
   bool _enabled = false;
 
-  /// Light foundation on the face skin, and blush + sheer lipstick on top.
+  /// Light foundation on the face skin, and a soft blush on top.
   bool _foundation = false, _makeup = false;
   bool get makeupSupported => supported;
   int _epoch = 0;
@@ -367,6 +368,60 @@ class FaceSmoothing {
         /* Native teardown must not block camera disposal. */
       }
     }();
+  }
+
+  /// Takes the photo and prepares the review photo with the beauty look:
+  /// one orientation pass, face detection, one GPU retouch, one final pass.
+  /// [onShot] fires as soon as the shutter has fired.
+  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) async {
+    final camera = _camera;
+    if (camera == null || !_enabled) throw StateError('Filter unavailable');
+    _enabled = false;
+    ++_epoch;
+    _clear();
+    await _stopStream(camera);
+    final file = await camera.takePicture();
+    onShot?.call();
+    final bytes = await compute(prepareStill, (
+      bytes: await file.readAsBytes(),
+      flip: stillIsMirrored(camera.description),
+    ));
+    final directory = await Directory.systemTemp.createTemp('digiwearit-face-');
+    Path? mask;
+    MakeupShapes? makeup;
+    try {
+      final photo = File('${directory.path}/photo.jpg');
+      await photo.writeAsBytes(bytes);
+      try {
+        final detected = _mainFace(
+          await _detector!.processImage(InputImage.fromFilePath(photo.path)),
+        );
+        if (detected != null) {
+          final face = _landmarks(detected);
+          mask = _faceMask(face);
+          makeup = _makeupFor(face);
+        }
+      } catch (_) {
+        // No retouch if detection fails; the photo itself is kept.
+      }
+    } finally {
+      unawaited(directory.delete(recursive: true).catchError((_) => directory));
+    }
+    if (mask == null && makeup == null) {
+      return compute(processCapture, (bytes: bytes, flip: false, eclat: true));
+    }
+    final pixels = await retouchPixels(
+      bytes,
+      mask: mask,
+      strength: _strength,
+      makeup: makeup,
+    );
+    return compute(processRawCapture, (
+      rgba: pixels.rgba,
+      width: pixels.width,
+      height: pixels.height,
+      eclat: true,
+    ));
   }
 
   Future<Uint8List> capture() async {

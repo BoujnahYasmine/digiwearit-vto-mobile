@@ -2,6 +2,9 @@ import 'try_on_session.dart';
 import 'package:flutter/material.dart';
 import 'mobile_layout.dart';
 import 'style_selection.dart';
+import 'profile_sheet.dart';
+import 'customer_profile.dart';
+import 'outfit_notifications.dart';
 
 class UniverseScreen extends StatefulWidget {
   const UniverseScreen({
@@ -19,6 +22,21 @@ class UniverseScreen extends StatefulWidget {
 
 class _UniverseScreenState extends State<UniverseScreen> {
   late bool english = widget.initialEnglish;
+
+  @override
+  void initState() {
+    super.initState();
+    // Simple journey only (the mirror is shared): offer new-outfit
+    // notifications once.
+    if (widget.onSelected == null) {
+      CustomerProfile.instance.load().then((profile) async {
+        if (profile.notifications != null) return;
+        await profile.setNotifications(true);
+        await OutfitNotifications.instance.enable(true);
+      });
+    }
+  }
+
   void choose(String gender) {
     if (widget.onSelected != null) {
       widget.onSelected!(gender, english);
@@ -80,47 +98,24 @@ class _UniverseScreenState extends State<UniverseScreen> {
                                   ),
                                 ),
                               ),
-                              _glassControl(
-                                child: PopupMenuButton<bool>(
-                                  tooltip: english ? 'Language' : 'Langue',
-                                  initialValue: english,
-                                  onSelected: (value) =>
-                                      setState(() => english = value),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: false,
-                                      child: Text('Français'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: true,
-                                      child: Text('English'),
-                                    ),
-                                  ],
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 14,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.language,
-                                          size: 20,
-                                          color: digiInk,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          english ? 'EN' : 'FR',
-                                          style: const TextStyle(
-                                            color: digiInk,
-                                          ),
-                                        ),
-                                      ],
+                              // Customer profile (simple journey only; the
+                              // mirror is shared by many customers).
+                              if (widget.onSelected == null)
+                                _glassControl(
+                                  child: IconButton(
+                                    key: const ValueKey('open-profile'),
+                                    tooltip: english
+                                        ? 'My profile'
+                                        : 'Mon profil',
+                                    onPressed: () => showProfileSheet(context),
+                                    icon: const Icon(
+                                      Icons.person_outline,
+                                      color: digiInk,
                                     ),
                                   ),
-                                ),
-                              ),
+                                )
+                              else
+                                const SizedBox(width: 48),
                             ],
                           ),
                         ),
@@ -157,9 +152,7 @@ class _UniverseScreenState extends State<UniverseScreen> {
                         ),
                         SizedBox(height: gap),
                         Text(
-                          english
-                              ? 'Who would you like to try an outfit for?'
-                              : 'Pour qui souhaitez-vous essayer une tenue ?',
+                          english ? 'You are?' : 'Vous êtes ?',
                           textAlign: TextAlign.center,
                           maxLines: 3,
                           style: TextStyle(
@@ -174,8 +167,8 @@ class _UniverseScreenState extends State<UniverseScreen> {
                         SizedBox(height: gap * .7),
                         Text(
                           english
-                              ? 'Choose a model to discover our collection.'
-                              : 'Choisissez le modèle pour découvrir notre collection.',
+                              ? 'Choose woman or man to discover our collection.'
+                              : 'Choisissez femme ou homme pour découvrir notre collection.',
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           style: TextStyle(
@@ -199,22 +192,21 @@ class _UniverseScreenState extends State<UniverseScreen> {
                             const Expanded(
                               child: Divider(color: Color(0xffac91bd)),
                             ),
-                            Flexible(
-                              flex: 6,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'DRESS YOURSELF DIFFERENTLY',
-                                    style: TextStyle(
-                                      color: const Color(0xffa58bb8),
-                                      fontSize: wide ? 12 : 9,
-                                      letterSpacing: 3,
-                                    ),
-                                  ),
+                            // Both lines share the rest equally, so the
+                            // slogan sits exactly in the middle (the extra
+                            // left padding balances the trailing spacing).
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 15,
+                                right: 12,
+                              ),
+                              child: Text(
+                                'DIGITALLY WEAR IT',
+                                key: const ValueKey('footer-slogan'),
+                                style: TextStyle(
+                                  color: const Color(0xffa58bb8),
+                                  fontSize: wide ? 12 : 9,
+                                  letterSpacing: 3,
                                 ),
                               ),
                             ),
@@ -345,8 +337,8 @@ class _UniverseScreenState extends State<UniverseScreen> {
                                   height: wide ? 58 : 36,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: female ? digiGradient : null,
-                                    color: female ? null : Colors.white30,
+                                    // Same gradient arrow on both cards.
+                                    gradient: digiGradient,
                                     border: Border.all(color: Colors.white54),
                                   ),
                                   child: const Icon(

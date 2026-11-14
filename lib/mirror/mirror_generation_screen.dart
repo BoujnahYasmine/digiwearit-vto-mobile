@@ -1,5 +1,6 @@
 import '../experience_failure.dart';
 import 'package:flutter/material.dart';
+import '../app_language.dart';
 
 import '../full_photo_scene.dart';
 import '../mobile_layout.dart';
@@ -19,7 +20,7 @@ class _MirrorGenerationScreenState extends State<MirrorGenerationScreen> {
   late final MirrorTryOnController controller =
       widget.controller ?? MirrorTryOnController.current;
   bool _handled = false;
-  bool english = false;
+  bool english = AppLanguage.english;
   String t(String fr, String en) => english ? en : fr;
 
   @override
@@ -126,8 +127,8 @@ class _MirrorGenerationScreenState extends State<MirrorGenerationScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   t(
-                    'Notre IA prépare votre nouvelle tenue.',
-                    'Our AI is preparing your new outfit.',
+                    'Nous préparons votre nouvelle tenue.',
+                    'We are preparing your new outfit.',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
@@ -149,17 +150,7 @@ class _MirrorGenerationScreenState extends State<MirrorGenerationScreen> {
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                ShaderMask(
-                                  shaderCallback: digiGradient.createShader,
-                                  child: const SizedBox(
-                                    width: 82,
-                                    height: 82,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 5,
-                                    ),
-                                  ),
-                                ),
+                                const DigiSpinner(),
                                 const Icon(
                                   Icons.auto_awesome,
                                   color: Color(0xffd795ff),
@@ -185,6 +176,33 @@ class _MirrorGenerationScreenState extends State<MirrorGenerationScreen> {
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
+                            ),
+                          ),
+                        ] else if (controller.error?.kind ==
+                            MirrorErrorKind.quota) ...[
+                          const Icon(
+                            Icons.auto_awesome,
+                            color: Color(0xffd795ff),
+                            size: 56,
+                          ),
+                          const SizedBox(height: 18),
+                          const Text(
+                            Friendly.quota,
+                            key: ValueKey('mirror-credits-used-up'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            Friendly.quotaHelp,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
                           ),
                         ] else ...[
@@ -249,6 +267,16 @@ class _MirrorGenerationScreenState extends State<MirrorGenerationScreen> {
   Widget _errorFooter() {
     final failure = controller.error;
     if (failure == null) return const SizedBox.shrink();
+    // No credits left: another outfit or a retry would not help.
+    if (failure.kind == MirrorErrorKind.quota) {
+      return OverlayGlass(
+        child: DigiButton(
+          key: const ValueKey('mirror-error-home'),
+          label: 'Retour à l’accueil',
+          onPressed: _returnHome,
+        ),
+      );
+    }
     return OverlayGlass(
       child: Column(
         mainAxisSize: MainAxisSize.min,

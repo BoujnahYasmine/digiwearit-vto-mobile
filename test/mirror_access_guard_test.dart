@@ -28,7 +28,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Private partner camera'), findsNothing);
       active = true;
-      await tester.tap(find.text('Reessayer'));
+      await tester.tap(find.text('Réessayer'));
       await tester.pumpAndSettle();
       expect(find.text('Private partner camera'), findsOneWidget);
       expect(checks, 3);

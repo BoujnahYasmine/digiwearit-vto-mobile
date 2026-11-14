@@ -126,7 +126,7 @@ class _RatingSheetState extends State<RatingSheet> {
             child: Column(
               children: [
                 SizedBox(
-                  height: 32,
+                  height: 48,
                   child: Stack(
                     alignment: Alignment.topCenter,
                     children: [
@@ -148,7 +148,8 @@ class _RatingSheetState extends State<RatingSheet> {
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.white12,
                           ),
-                          onPressed: busy ? null : skip,
+                          // Always closes the survey, whatever its state.
+                          onPressed: () => Navigator.pop(context),
                           icon: const Icon(
                             Icons.close,
                             color: Colors.white,
@@ -189,7 +190,11 @@ class _RatingSheetState extends State<RatingSheet> {
                                     ],
                                   ),
                                   child: Icon(
-                                    done ? Icons.check : Icons.favorite_border,
+                                    skipped
+                                        ? Icons.checkroom
+                                        : done
+                                        ? Icons.check
+                                        : Icons.favorite_border,
                                     color: digiInk,
                                     size: 27,
                                   ),
@@ -199,7 +204,7 @@ class _RatingSheetState extends State<RatingSheet> {
                               Text(
                                 done
                                     ? skipped
-                                          ? 'Merci 💜'
+                                          ? 'Et maintenant ?'
                                           : 'Merci pour votre avis 💜'
                                     : 'Votre avis nous intéresse ✨',
                                 textAlign: TextAlign.center,
@@ -210,11 +215,18 @@ class _RatingSheetState extends State<RatingSheet> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              if (done) ...[
+                              if (done && skipped)
+                                const Text(
+                                  'Essayez une autre tenue ou terminez votre session.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                )
+                              else if (done) ...[
                                 Text(
-                                  skipped
-                                      ? 'À bientôt pour un nouvel essayage.'
-                                      : 'Votre retour nous aide à améliorer l’expérience Digiwearit.',
+                                  'Votre retour nous aide à améliorer l’expérience Digiwearit.',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     color: Colors.white70,

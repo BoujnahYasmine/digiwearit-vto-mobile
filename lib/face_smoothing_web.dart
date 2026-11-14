@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'photo_check.dart';
 import 'dart:js_interop';
 import 'dart:typed_data';
+import 'camera_service.dart';
+import 'capture_processing.dart';
 
 @JS('digiFaceFilter.start')
 external JSPromise<JSBoolean> _start(JSNumber strength);
@@ -38,4 +40,10 @@ class FaceSmoothing {
   }
 
   Future<Uint8List> capture() async => (await _capture().toDart).toDart;
+
+  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) async {
+    final bytes = await capture();
+    onShot?.call();
+    return processStill(bytes, null, eclat: true);
+  }
 }

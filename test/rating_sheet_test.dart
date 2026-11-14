@@ -6,20 +6,29 @@ import 'fixtures.dart';
 
 void main() {
   for (final size in phones) {
-    testWidgets('rating closes as skip and fits $size', (tester) async {
+    testWidgets('rating close button closes the sheet and fits $size', (
+      tester,
+    ) async {
       viewport(tester, size);
       var sends = 0;
       await tester.pumpWidget(
         app(
           Scaffold(
-            body: RatingSheet(
-              sender: (_) async {
-                sends++;
-              },
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showRatingSheet(
+                  context,
+                  sender: (_) async {
+                    sends++;
+                  },
+                ),
+                child: const Text('open'),
+              ),
             ),
           ),
         ),
       );
+      await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
       expect(find.byType(SingleChildScrollView), findsOneWidget);
       expect(find.byIcon(Icons.star), findsNothing);
@@ -34,7 +43,7 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('rating-close')));
       await tester.pumpAndSettle();
-      expect(find.text('Terminer'), findsOneWidget);
+      expect(find.byType(RatingSheet), findsNothing);
       expect(sends, 0);
       expect(tester.takeException(), isNull);
     });

@@ -4,9 +4,9 @@ import 'mirror/mirror_access_guard.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'app_language.dart';
 import 'firebase_startup.dart';
 import 'admin_screen.dart';
-import 'background_music.dart';
 import 'welcome_screen.dart';
 import 'universe_screen.dart';
 import 'style_screen.dart';
@@ -26,6 +26,8 @@ import 'mirror/mirror_camera_screen.dart';
 import 'mirror/mirror_generation_screen.dart';
 import 'mirror/mirror_result_screen.dart';
 import 'outfit.dart';
+import 'outfit_notifications.dart';
+import 'customer_profile.dart';
 export 'outfit.dart';
 
 Future<void> main() async {
@@ -41,7 +43,19 @@ Future<void> main() async {
     return true;
   };
   StorePayment.instance.start();
+  OutfitNotifications.instance
+    ..navigator = DigiwearitApp.navigatorKey
+    ..messenger = DigiwearitApp.messengerKey;
   runApp(const DigiwearitApp());
+  // Customers who accepted new-outfit notifications: listen again so a tap
+  // on one opens the journey.
+  unawaited(
+    CustomerProfile.instance.load().then((profile) {
+      if (profile.notifications == true) {
+        return OutfitNotifications.instance.enable(true);
+      }
+    }),
+  );
   unawaited(
     FirebaseStartup.ensureReady().catchError((Object error) {
       debugPrint('Firebase startup unavailable: $error');
@@ -51,12 +65,14 @@ Future<void> main() async {
 
 class DigiwearitApp extends StatelessWidget {
   const DigiwearitApp({super.key});
+  static final navigatorKey = GlobalKey<NavigatorState>();
+  static final messengerKey = GlobalKey<ScaffoldMessengerState>();
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
+    navigatorKey: navigatorKey,
+    scaffoldMessengerKey: messengerKey,
     title: 'Digiwearit',
-    builder: (context, child) =>
-        BackgroundMusic(child: child ?? const SizedBox.shrink()),
     theme: ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff5146f5)),
@@ -123,6 +139,7 @@ class DigiwearitApp extends StatelessWidget {
           '/mirror': (_) => const MirrorSetupScreen(),
           '/mirror/home': (_) => const MirrorHomeScreen(),
           '/mirror/universe': (context) => UniverseScreen(
+            initialEnglish: AppLanguage.english,
             onBack: () => Navigator.of(
               context,
             ).pushNamedAndRemoveUntil('/', (route) => false),

@@ -40,11 +40,6 @@ cd ios && pod install && cd ..
 
 La première installation des pods prend plusieurs minutes.
 
-**Musique (facultatif).** Le fichier `assets/music/background.mp3` n'est pas
-publié sur GitHub (licence de la musique). Copiez votre fichier à cet
-emplacement pour avoir la musique ; sans lui, l'application fonctionne en
-silence.
-
 ## 3. Installer sur un iPhone (recommandé)
 
 La caméra, le filtre « Éclat » et la détection du visage se testent sur un
@@ -92,6 +87,27 @@ PNG glissée sur la fenêtre du simulateur. Sur un Mac à puce Apple, la
 bibliothèque de détection du visage (Google ML Kit) peut refuser de se
 compiler pour le simulateur ; dans ce cas, utiliser un vrai iPhone.
 
+## 4 bis. Notifications « Nouvelle tenue » (iPhone)
+
+L'application est prête (mode arrière-plan `remote-notification` déjà
+déclaré). Sans les deux étapes ci-dessous, elle fonctionne normalement mais
+l'iPhone ne reçoit pas les notifications. Elles demandent un **compte
+Apple Developer payant** : avec un identifiant Apple gratuit, ne les faites
+pas, sinon Xcode refusera de signer l'application.
+
+1. Dans **Xcode > Runner > Signing & Capabilities**, cliquer **+ Capability**
+   et ajouter **Push Notifications** (Xcode crée le fichier d'entitlements).
+2. Sur https://developer.apple.com > *Certificates, Identifiers & Profiles* >
+   *Keys*, créer une clé **Apple Push Notifications service (APNs)** et
+   télécharger le fichier `.p8` (une seule fois possible).
+3. Dans la **console Firebase** > Paramètres du projet `vto-with-nano` >
+   **Cloud Messaging** > *Configuration de l'application Apple*, envoyer ce
+   fichier `.p8` avec son *Key ID* et votre *Team ID*.
+
+Test : ouvrir l'application, aller jusqu'à « Vous êtes ? » et accepter les
+notifications, mettre l'application en arrière-plan, puis activer une tenue
+dans le super admin. Toucher la notification ouvre l'essayage de la tenue.
+
 ## 5. Publier (TestFlight ou App Store)
 
 1. Adhérer à l'**Apple Developer Program** (99 USD par an).
@@ -118,6 +134,9 @@ compiler pour le simulateur ; dans ce cas, utiliser un vrai iPhone.
   facturée sur le projet Firebase.
 - Espace partenaire : activer avec un code créé dans l'espace entreprise du
   site d'administration.
+- Profil (icône en haut à droite de « Vous êtes ? ») : e-mail mémorisé,
+  historique des essayages, contact du support.
+- Drapeaux des cultures sur l'écran des styles.
 
 Une autorisation caméra refusée se rétablit dans **Réglages >
 Confidentialité et sécurité > Caméra**.

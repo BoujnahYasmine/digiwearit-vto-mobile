@@ -26,8 +26,6 @@ flutter test
 - **iPhone avec un MacBook** : voir [IOS_SETUP.md](IOS_SETUP.md).
 - Options : `--dart-define=DEMO_PAYMENT=true` (paiement de démonstration),
   `--dart-define=USE_FIREBASE_EMULATOR=true` (émulateurs Firebase locaux).
-- La musique d'ambiance (`assets/music/background.mp3`) n'est pas publiée ;
-  sans elle, l'application fonctionne en silence.
 
 ## Organisation
 

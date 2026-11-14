@@ -50,7 +50,9 @@ class _MirrorAccessGuardState extends State<MirrorAccessGuard>
           ? (error.details as Map)['reason']
           : null;
       _message =
-          reason == 'ENTERPRISE_SUSPENDED' || reason == 'MIRROR_SUSPENDED'
+          reason == 'ENTERPRISE_SUSPENDED' ||
+              reason == 'MIRROR_SUSPENDED' ||
+              reason == 'MIRROR_DISABLED'
           ? Friendly.servicePaused
           : error.code == 'unauthenticated'
           ? Friendly.mirrorReconnect
@@ -104,20 +106,20 @@ class _MirrorAccessGuardState extends State<MirrorAccessGuard>
                   const SizedBox(height: 16),
                   Text(
                     _checking
-                        ? "Vérification de l?accès partenaire..."
+                        ? 'Vérification de l’accès partenaire…'
                         : _message,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _checking ? null : _check,
-                    child: const Text('Reessayer'),
+                    child: const Text('Réessayer'),
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(
                       context,
                     ).pushNamedAndRemoveUntil('/', (_) => false),
-                    child: const Text('Retour a l\'accueil'),
+                    child: const Text('Retour à l’accueil'),
                   ),
                 ],
               ),

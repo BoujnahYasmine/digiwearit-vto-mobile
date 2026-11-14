@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/widgets.dart';
 import 'photo_check.dart';
 import 'dart:typed_data';
+import 'capture_processing.dart';
 
 class FaceSmoothing {
   void bind(CameraController camera) {}
@@ -16,4 +17,6 @@ class FaceSmoothing {
   void setMakeup({required bool foundation, required bool color}) {}
   Future<void> stop() async {}
   Future<Uint8List> capture() => Future.error(UnsupportedError('Web only'));
+  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) =>
+      Future.error(UnsupportedError('Web only'));
 }

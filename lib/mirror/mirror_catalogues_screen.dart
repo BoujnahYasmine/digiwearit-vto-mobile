@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../experience_failure.dart';
 import '../mobile_layout.dart';
 import 'mirror_content.dart';
 import 'mirror_tryon_controller.dart';
+import '../culture_flag.dart';
 
 /// Only content returned for the authenticated mirror is displayed here.
 class MirrorCataloguesScreen extends StatefulWidget {
@@ -69,10 +71,6 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
   @override
   Widget build(BuildContext context) {
     final items = catalogues;
-    final ready =
-        !controller.loadingContent &&
-        controller.contentError == null &&
-        items.any((c) => c.id == selectedId);
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -118,37 +116,8 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
                                     ),
                                   ),
                                 ),
-                                _glass(
-                                  PopupMenuButton<bool>(
-                                    tooltip: english ? 'Language' : 'Langue',
-                                    onSelected: (value) =>
-                                        setState(() => english = value),
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(
-                                        value: false,
-                                        child: Text('Fran\u00e7ais'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: true,
-                                        child: Text('English'),
-                                      ),
-                                    ],
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(10),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.language,
-                                            size: 16,
-                                            color: digiInk,
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(english ? 'EN' : 'FR'),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                // Language is chosen on the home page only.
+                                const SizedBox(width: 48),
                               ],
                             ),
                           ),
@@ -179,8 +148,8 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
                           SizedBox(height: gap),
                           Text(
                             english
-                                ? 'Which collection would you like to explore?'
-                                : 'Quel style souhaitez-vous explorer ?',
+                                ? 'Discover the outfits of other cultures'
+                                : 'Découvrez les tenues d’autres cultures',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: digiInk,
@@ -220,22 +189,7 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
                                   controller.setAllowMakeup(value ?? false),
                             ),
                           SizedBox(height: gap),
-                          SizedBox(
-                            width: double.infinity,
-                            child: DigiButton(
-                              key: const ValueKey('mirror-catalogue-continue'),
-                              label: english ? 'Continue' : 'Continuer',
-                              onPressed: ready ? _continue : null,
-                            ),
-                          ),
-                          SizedBox(height: gap),
-                          const Text(
-                            'D R E S S  Y O U R S E L F  D I F F E R E N T L Y',
-                            style: TextStyle(
-                              color: Color(0xff9c7aac),
-                              fontSize: 8,
-                            ),
-                          ),
+                          const DigiSlogan(color: Color(0xff9c7aac)),
                           SizedBox(height: gap),
                         ],
                       ),
@@ -253,6 +207,37 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
   Widget _body(List<MirrorCatalogue> items, bool wide) {
     if (controller.loadingContent) {
       return const Center(child: CircularProgressIndicator());
+    }
+    if (controller.creditsUsedUp) {
+      return Center(
+        child: Column(
+          key: const ValueKey('mirror-credits-used-up'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.auto_awesome, size: 44, color: Color(0xff9c6ad8)),
+            const SizedBox(height: 14),
+            Text(
+              english
+                  ? 'Virtual try-ons are fully booked for now ✨'
+                  : Friendly.quota,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: digiInk,
+                fontSize: 19,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              english
+                  ? 'Thank you for visiting! A store advisor will be happy to help you try on your favourites.'
+                  : Friendly.quotaHelp,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xff6f5f83), fontSize: 14),
+            ),
+          ],
+        ),
+      );
     }
     if (controller.contentError != null) {
       return Center(
@@ -352,7 +337,11 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
             color: const Color(0xffa18ba9),
             child: InkWell(
               key: ValueKey('mirror-catalogue-${catalogue.id}'),
-              onTap: () => setState(() => selectedId = catalogue.id),
+              // One tap chooses the style and opens its outfits.
+              onTap: () {
+                setState(() => selectedId = catalogue.id);
+                _continue();
+              },
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -381,11 +370,14 @@ class _MirrorCataloguesScreenState extends State<MirrorCataloguesScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.auto_awesome_outlined,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                        if (catalogue.flag != null)
+                          CultureFlag(catalogue.flag!, height: 20)
+                        else
+                          const Icon(
+                            Icons.auto_awesome_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         const SizedBox(height: 4),
                         Text(
                           catalogue.name,

@@ -74,8 +74,8 @@ class _GenerationViewState extends State<GenerationView> {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               t(
-                'Notre IA prépare votre nouvelle tenue.',
-                'Our AI is preparing your new outfit.',
+                'Nous préparons votre nouvelle tenue.',
+                'We are preparing your new outfit.',
               ),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 13),
@@ -97,17 +97,7 @@ class _GenerationViewState extends State<GenerationView> {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            ShaderMask(
-                              shaderCallback: digiGradient.createShader,
-                              child: const SizedBox(
-                                width: 82,
-                                height: 82,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 5,
-                                ),
-                              ),
-                            ),
+                            const DigiSpinner(),
                             const Icon(
                               Icons.auto_awesome,
                               color: Color(0xffd795ff),

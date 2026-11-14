@@ -167,53 +167,8 @@ class _ModelScreenState extends State<ModelScreen> {
                                   ),
                                 ),
                               ),
-                              _glass(
-                                PopupMenuButton<bool>(
-                                  tooltip: t('Langue', 'Language'),
-                                  initialValue: english,
-                                  onSelected: (value) =>
-                                      setState(() => english = value),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: false,
-                                      child: Text('Français'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: true,
-                                      child: Text('English'),
-                                    ),
-                                  ],
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.language,
-                                          size: 18,
-                                          color: digiInk,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          english ? 'EN' : 'FR',
-                                          style: const TextStyle(
-                                            color: digiInk,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down,
-                                          size: 16,
-                                          color: digiInk,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Language is chosen on the home page only.
+                              const SizedBox(width: 48),
                             ],
                           ),
                         ),
@@ -492,12 +447,12 @@ class _ModelScreenState extends State<ModelScreen> {
                               Text(
                                 StorePayment.supported
                                     ? t(
-                                        'Essayage IA · 29 DH',
-                                        'AI try-on · 29 DH',
+                                        'Essayage virtuel · 29 DH',
+                                        'Virtual try-on · 29 DH',
                                       )
                                     : t(
-                                        'Essayage IA · 29 DH · Démo, aucun débit',
-                                        'AI try-on · 29 DH · Demo, no charge',
+                                        'Essayage virtuel · 29 DH · Démo, aucun débit',
+                                        'Virtual try-on · 29 DH · Demo, no charge',
                                       ),
                                 maxLines: 2,
                                 textAlign: TextAlign.center,

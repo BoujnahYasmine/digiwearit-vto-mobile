@@ -34,9 +34,13 @@ class FakeSession implements MirrorSessionGateway {
 class FakeContent implements MirrorContentGateway {
   FakeContent(this.content);
   MirrorContent content;
+  Object? failure;
 
   @override
-  Future<MirrorContent> load() async => content;
+  Future<MirrorContent> load() async {
+    if (failure != null) throw failure!;
+    return content;
+  }
 }
 
 class FakeGeneration implements MirrorGenerationGateway {
@@ -244,7 +248,7 @@ void main() {
       },
     );
 
-    test('AI_QUOTA_EXCEEDED maps to quota message and backToOutfits', () async {
+    test('AI_QUOTA_EXCEEDED shows the friendly credits message', () async {
       generation.handler = () =>
           throw MirrorGenerationException('AI_QUOTA_EXCEEDED');
       await controller.loadContent();
@@ -253,8 +257,21 @@ void main() {
       await controller.confirmPhoto(bytes());
       expect(controller.error?.kind, MirrorErrorKind.quota);
       expect(controller.error?.message, Friendly.quota);
-      expect(controller.error?.backToOutfits, isTrue);
+      // Another outfit or a retry would not help once credits are used up.
+      expect(controller.error?.backToOutfits, isFalse);
       expect(controller.error?.retryable, isFalse);
+    });
+
+    test('no credits left when opening the collections is not a technical '
+        'or reconnect message', () async {
+      content.failure = MirrorSessionException('AI_QUOTA_EXCEEDED');
+      expect(await controller.loadContent(forceRefresh: true), isFalse);
+      expect(controller.creditsUsedUp, isTrue);
+      expect(controller.contentError, Friendly.quota);
+      content.failure = MirrorSessionException('INVALID_MIRROR_TOKEN');
+      await controller.loadContent(forceRefresh: true);
+      expect(controller.creditsUsedUp, isFalse);
+      expect(controller.contentError, Friendly.mirrorReconnect);
     });
 
     test('OUTFIT_NOT_AVAILABLE maps to a backToOutfits error', () async {

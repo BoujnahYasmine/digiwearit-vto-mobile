@@ -118,49 +118,8 @@ class FullPhotoScene extends StatelessWidget {
                           ),
                         ),
                       ),
-                      PopupMenuButton<bool>(
-                        tooltip: english ? 'Language' : 'Langue',
-                        initialValue: english,
-                        onSelected: (value) {
-                          if (value != english) onLanguage();
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: false, child: Text('Français')),
-                          PopupMenuItem(value: true, child: Text('English')),
-                        ],
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.language,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                english ? 'EN' : 'FR',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const Icon(
-                                Icons.expand_more,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      // Language is chosen on the home page only.
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),

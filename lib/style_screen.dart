@@ -6,6 +6,7 @@ import 'try_on_session.dart';
 import 'package:flutter/material.dart';
 import 'mobile_layout.dart';
 import 'style_selection.dart';
+import 'culture_flag.dart';
 
 class StyleScreen extends StatefulWidget {
   const StyleScreen({
@@ -61,6 +62,14 @@ class _StyleScreenState extends State<StyleScreen> {
   late List<(String, String, String, String, String, IconData)> styles = [
     ...defaults,
   ];
+
+  /// Country flag per style; the admin's choice replaces these defaults.
+  static const defaultFlags = {
+    'Marocain': 'MA',
+    'Hindien': 'IN',
+    'Espagnol': 'ES',
+  };
+  Map<String, String> flags = {...defaultFlags};
   StreamSubscription<List<LookCategory>>? _subscription;
   @override
   void initState() {
@@ -69,6 +78,7 @@ class _StyleScreenState extends State<StyleScreen> {
         .listen(
           (items) {
             final merged = [...defaults];
+            final mergedFlags = {...defaultFlags};
             for (final item in items.where(
               (item) => item.active && item.name.isNotEmpty,
             )) {
@@ -76,6 +86,15 @@ class _StyleScreenState extends State<StyleScreen> {
                 (entry) =>
                     normalizedStyle(entry.$1) == normalizedStyle(item.name),
               );
+              final key = index >= 0 ? merged[index].$1 : item.name;
+              // null: never set in the admin, the default stays.
+              if (item.flag != null) {
+                if (item.flag!.isEmpty) {
+                  mergedFlags.remove(key);
+                } else {
+                  mergedFlags[key] = item.flag!;
+                }
+              }
               if (index >= 0) {
                 final old = merged[index];
                 merged[index] = (
@@ -102,6 +121,7 @@ class _StyleScreenState extends State<StyleScreen> {
             if (!mounted) return;
             setState(() {
               styles = merged;
+              flags = mergedFlags;
               if (!styles.any((item) => item.$1 == selected))
                 selected = styles.first.$1;
             });
@@ -177,52 +197,8 @@ class _StyleScreenState extends State<StyleScreen> {
                                   ),
                                 ),
                               ),
-                              _glass(
-                                PopupMenuButton<bool>(
-                                  tooltip: english ? 'Language' : 'Langue',
-                                  initialValue: english,
-                                  onSelected: (value) =>
-                                      setState(() => english = value),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: false,
-                                      child: Text('Français'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: true,
-                                      child: Text('English'),
-                                    ),
-                                  ],
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.language,
-                                          color: digiInk,
-                                          size: 19,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          english ? 'EN' : 'FR',
-                                          style: const TextStyle(
-                                            color: digiInk,
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down,
-                                          size: 16,
-                                          color: digiInk,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Language is chosen on the home page only.
+                              const SizedBox(width: 48),
                             ],
                           ),
                         ),
@@ -258,8 +234,8 @@ class _StyleScreenState extends State<StyleScreen> {
                         SizedBox(height: gap),
                         Text(
                           english
-                              ? 'Which style would you like to explore?'
-                              : 'Quel style souhaitez-vous explorer ?',
+                              ? 'Discover the outfits of other cultures'
+                              : 'Découvrez les tenues d’autres cultures',
                           textAlign: TextAlign.center,
                           maxLines: 3,
                           style: TextStyle(
@@ -274,8 +250,8 @@ class _StyleScreenState extends State<StyleScreen> {
                         SizedBox(height: gap * .65),
                         Text(
                           english
-                              ? 'Discover our traditional and modern outfit collections.'
-                              : 'Découvrez nos univers de tenues traditionnelles et modernes.',
+                              ? 'Choose a style to begin.'
+                              : 'Choisissez un style pour commencer.',
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           style: TextStyle(
@@ -304,60 +280,11 @@ class _StyleScreenState extends State<StyleScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(height: gap),
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            gradient: digiGradient,
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                          child: TextButton(
-                            key: const ValueKey('style-continue'),
-                            onPressed: next,
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(0, 52),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: Text(
-                                    english ? 'Continue' : 'Continuer',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 17,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_forward,
-                                  color: Colors.white,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                         Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: compact ? 12 : 22,
                           ),
-                          child: const FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '—  DRESS YOURSELF DIFFERENTLY  —',
-                              style: TextStyle(
-                                color: Color(0xffa68eba),
-                                fontSize: 9,
-                                letterSpacing: 3,
-                              ),
-                            ),
-                          ),
+                          child: const DigiSlogan(),
                         ),
                       ],
                     ),
@@ -408,7 +335,11 @@ class _StyleScreenState extends State<StyleScreen> {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             key: ValueKey('style-${item.$1}'),
-            onTap: () => setState(() => selected = item.$1),
+            // One tap chooses the style and opens its outfits.
+            onTap: () {
+              setState(() => selected = item.$1);
+              next();
+            },
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -471,7 +402,12 @@ class _StyleScreenState extends State<StyleScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (!compact)
+                            if (flags[item.$1] != null)
+                              CultureFlag(
+                                flags[item.$1]!,
+                                height: wide ? 28 : (compact ? 16 : 20),
+                              )
+                            else if (!compact)
                               Icon(
                                 item.$6,
                                 color: Colors.white,

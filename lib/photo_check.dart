@@ -83,8 +83,12 @@ PhotoCheck checkPhoto(Uint8List bytes) {
     decoded = null;
   }
   if (decoded == null) return (lighting: null, quality: null);
-  return (lighting: _lighting(decoded), quality: _quality(decoded));
+  return checkImage(decoded);
 }
+
+/// Same check on an already decoded photo (no second decode).
+PhotoCheck checkImage(image.Image decoded) =>
+    (lighting: _lighting(decoded), quality: _quality(decoded));
 
 LightingIssue? assessPhotoLighting(Uint8List bytes) =>
     checkPhoto(bytes).lighting;
