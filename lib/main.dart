@@ -98,13 +98,20 @@ class DigiwearitApp extends StatelessWidget {
           '/try-on': (context) {
             final arguments = ModalRoute.of(context)?.settings.arguments;
             if (arguments is OutfitSelection) {
+              // The outfit is re-checked while the customer takes the photo,
+              // so "Continuer" goes on at once.
+              Future<Outfit?> fresh() => OutfitRepository()
+                  .getOutfitById(arguments.outfit.id, fromServer: true)
+                  .timeout(const Duration(seconds: 15));
+              final early = fresh().then<Outfit?>(
+                (outfit) => outfit,
+                onError: (Object _) => null,
+              );
               return PhotoScreen(
                 selection: arguments,
                 makeup: normalizedGender(arguments.gender) == 'femme',
                 onContinue: (context, bytes) async {
-                  final latest = await OutfitRepository()
-                      .getOutfitById(arguments.outfit.id, fromServer: true)
-                      .timeout(const Duration(seconds: 15));
+                  final latest = await early ?? await fresh();
                   if (!context.mounted) return;
                   if (latest == null || !latest.active) {
                     ScaffoldMessenger.of(context).showSnackBar(

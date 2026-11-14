@@ -12,6 +12,10 @@ typedef CaptureJob = ({Uint8List bytes, bool flip, bool eclat});
 /// The photo shown for review, and its automatic light/quality check.
 typedef ProcessedCapture = ({Uint8List bytes, PhotoCheck check});
 
+/// Called as soon as the shutter fired, with the still as saved by the
+/// camera and whether it is mirrored (for an instant preview).
+typedef ShotCallback = void Function(Uint8List raw, bool mirrored);
+
 /// Already-decoded pixels (RGBA, opaque) from the GPU retouch pass.
 typedef RawCaptureJob = ({Uint8List rgba, int width, int height, bool eclat});
 

@@ -17,6 +17,6 @@ class FaceSmoothing {
   void setMakeup({required bool foundation, required bool color}) {}
   Future<void> stop() async {}
   Future<Uint8List> capture() => Future.error(UnsupportedError('Web only'));
-  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) =>
+  Future<ProcessedCapture> captureForReview({ShotCallback? onShot}) =>
       Future.error(UnsupportedError('Web only'));
 }

@@ -100,20 +100,6 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
   int _countdown = 0;
   bool _loading = false, _busy = false;
 
-  /// Shutter feedback: the photo is taken (frozen frame, flash, vibration)
-  /// even while it is still being prepared for review.
-  bool _shot = false, _flash = false;
-  void _onShot() {
-    HapticFeedback.mediumImpact();
-    final camera = _camera;
-    if (camera != null) unawaited(camera.pausePreview().catchError((_) {}));
-    if (!mounted) return;
-    setState(() => _shot = _flash = true);
-    Future<void>.delayed(const Duration(milliseconds: 140), () {
-      if (mounted) setState(() => _flash = false);
-    });
-  }
-
   late final bool _english =
       widget.english ?? widget.selection?.english ?? false;
   String? _error;
@@ -225,6 +211,28 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Opens "Tout est parfait ?". With [pending] it shows [bytes] (the raw
+  /// still) at once and switches to the prepared photo when it is ready.
+  Future<void> _openReview(
+    Uint8List bytes, {
+    PhotoCheck? check,
+    Future<ProcessedCapture>? pending,
+    bool mirrored = false,
+  }) => Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (_, animation, secondaryAnimation) => PhotoReviewScreen(
+        bytes: bytes,
+        english: _english,
+        check: check,
+        pending: pending,
+        previewMirrored: mirrored,
+        onContinue: widget.onContinue,
+      ),
+    ),
+  );
+
   Future<void> _capture({bool gallery = false}) async {
     if (_busy || _countdown > 0) return;
     if (!gallery && _camera?.value.isInitialized != true) {
@@ -232,6 +240,17 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
       return;
     }
     setState(() => _busy = true);
+    final ready = Completer<ProcessedCapture>();
+    Future<void>? review;
+    // The review opens as soon as the shutter fired; the photo is prepared
+    // behind it.
+    void shown(Uint8List raw, bool mirrored) {
+      if (review != null || !mounted) return;
+      HapticFeedback.mediumImpact();
+      setState(() => _photo = raw);
+      review = _openReview(raw, pending: ready.future, mirrored: mirrored);
+    }
+
     try {
       Uint8List bytes;
       PhotoCheck? check;
@@ -245,12 +264,10 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
           debugPrint('Photo check skipped: $error');
         }
       } else {
-        // One background pass prepares the photo (orientation, light check
-        // before Éclat, Éclat), so it shows right after the countdown.
         ProcessedCapture? shot;
         if (_smoothing > 0) {
           try {
-            shot = await _faceSmoothing.captureForReview(onShot: _onShot);
+            shot = await _faceSmoothing.captureForReview(onShot: shown);
           } catch (error) {
             // The beauty look is automatic, so a plain photo is taken quietly.
             debugPrint('Beauty capture skipped: $error');
@@ -260,10 +277,11 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         shot ??= await _cameraService.captureForReview(
           _camera!,
           eclat: true,
-          onShot: _shot ? null : _onShot,
+          onShot: shown,
         );
         bytes = shot.bytes;
         check = shot.check;
+        ready.complete(shot);
       }
       if (!mounted) return;
       final live = _camera;
@@ -277,21 +295,15 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
       });
       // The camera closes in the background: the photo does not wait for it.
       unawaited(_stopFilter().then((_) => _release(live)));
-      await Navigator.of(context).push(
-        PageRouteBuilder<void>(
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-          pageBuilder: (_, animation, secondaryAnimation) => PhotoReviewScreen(
-            bytes: bytes,
-            english: _english,
-            check: check,
-            onContinue: widget.onContinue,
-          ),
-        ),
-      );
+      await (review ?? _openReview(bytes, check: check));
       if (mounted) setState(() => _photo = null);
-    } catch (_) {
-      if (mounted) {
+    } catch (error) {
+      if (review != null) {
+        // The open review shows the problem and offers to retake.
+        if (!ready.isCompleted) ready.completeError(error);
+        await review;
+        if (mounted) setState(() => _photo = null);
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             action: SnackBarAction(
@@ -308,11 +320,8 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
         );
       }
     } finally {
-      if (_shot && _camera != null) {
-        unawaited(_camera!.resumePreview().catchError((_) {}));
-      }
       if (mounted) {
-        setState(() => _busy = _shot = _flash = false);
+        setState(() => _busy = false);
         if (_photo == null &&
             _camera == null &&
             !_loading &&
@@ -393,13 +402,6 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
               );
             },
           ),
-        IgnorePointer(
-          child: AnimatedOpacity(
-            opacity: _flash ? .85 : 0,
-            duration: Duration(milliseconds: _flash ? 40 : 220),
-            child: const ColoredBox(color: Colors.white),
-          ),
-        ),
         const IgnorePointer(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -611,13 +613,7 @@ class _PhotoScreenState extends State<PhotoScreen> with WidgetsBindingObserver {
                                     ? null
                                     : _beginCapture,
                                 padding: EdgeInsets.all(compact ? 19 : 24),
-                                icon: _shot
-                                    ? const Icon(
-                                        Icons.check_rounded,
-                                        color: Colors.white,
-                                        size: 32,
-                                      )
-                                    : _busy
+                                icon: _busy
                                     ? const SizedBox(
                                         width: 30,
                                         height: 30,

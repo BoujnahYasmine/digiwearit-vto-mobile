@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'photo_check.dart';
+import 'capture_processing.dart';
 import 'mobile_layout.dart';
 
 class PhotoReviewScreen extends StatefulWidget {
@@ -11,8 +12,17 @@ class PhotoReviewScreen extends StatefulWidget {
     required this.onContinue,
     this.english = false,
     this.check,
+    this.pending,
+    this.previewMirrored = false,
   });
+
+  /// The photo, or with [pending] the raw still shown while it is prepared.
   final Uint8List bytes;
+
+  /// The prepared photo (retouch and light check) still being computed: the
+  /// review opens at once on [bytes] and switches to it when ready.
+  final Future<ProcessedCapture>? pending;
+  final bool previewMirrored;
   final bool english;
 
   /// Automatic light and camera-quality check of the photo; problems are
@@ -24,16 +34,37 @@ class PhotoReviewScreen extends StatefulWidget {
 }
 
 class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
-  bool busy = false, valid = false;
+  bool busy = false, valid = false, failed = false;
+  late Uint8List bytes = widget.bytes;
+  late PhotoCheck? check = widget.check;
+  late bool mirrored = widget.pending != null && widget.previewMirrored;
   @override
   void initState() {
     super.initState();
-    validate();
+    final pending = widget.pending;
+    if (pending == null) {
+      validate();
+      return;
+    }
+    pending.then(
+      (shot) {
+        if (!mounted) return;
+        setState(() {
+          bytes = shot.bytes;
+          check = shot.check;
+          mirrored = false;
+        });
+        validate();
+      },
+      onError: (Object error) {
+        if (mounted) setState(() => failed = true);
+      },
+    );
   }
 
   Future<void> validate() async {
     try {
-      final codec = await ui.instantiateImageCodec(widget.bytes);
+      final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
       frame.image.dispose();
       codec.dispose();
@@ -48,7 +79,7 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
     if (busy || !valid) return;
     setState(() => busy = true);
     try {
-      await widget.onContinue(context, widget.bytes);
+      await widget.onContinue(context, bytes);
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -60,18 +91,22 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
     body: Stack(
       fit: StackFit.expand,
       children: [
-        Image.memory(
-          widget.bytes,
-          key: const ValueKey('review-photo'),
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
-          errorBuilder: (_, e, s) => Center(
-            child: Text(
-              english
-                  ? 'Unreadable photo. Please retake it.'
-                  : 'Photo illisible. Reprenez une photo.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
+        Transform.flip(
+          flipX: mirrored,
+          child: Image.memory(
+            bytes,
+            key: const ValueKey('review-photo'),
+            gaplessPlayback: true,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            errorBuilder: (_, e, s) => Center(
+              child: Text(
+                english
+                    ? 'Unreadable photo. Please retake it.'
+                    : 'Photo illisible. Reprenez une photo.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ),
@@ -150,14 +185,14 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
                             ],
                           ),
                         ),
-                        if (widget.check?.lighting case final issue?) ...[
+                        if (check?.lighting case final issue?) ...[
                           const SizedBox(height: 8),
                           PhotoTip(
                             lightingAdvice(issue, english: english),
                             key: const ValueKey('photo-lighting-warning'),
                           ),
                         ],
-                        if (widget.check?.quality case final issue?) ...[
+                        if (check?.quality case final issue?) ...[
                           const SizedBox(height: 8),
                           PhotoTip(
                             qualityAdvice(issue, english: english),
@@ -166,8 +201,12 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
                         ],
                         const SizedBox(height: 5),
                         Text(
-                          widget.check?.lighting != null ||
-                                  widget.check?.quality != null
+                          failed
+                              ? (english
+                                    ? 'This photo could not be prepared. Please retake it.'
+                                    : 'Cette photo n’a pas pu être préparée. Reprenez-la.')
+                              : check?.lighting != null ||
+                                    check?.quality != null
                               ? (english
                                     ? 'Retake for a better try-on, or continue.'
                                     : 'Reprenez pour un meilleur essayage, ou continuez.')
@@ -202,11 +241,7 @@ class _PhotoReviewScreenState extends State<PhotoReviewScreen> {
                             Expanded(
                               child: DigiButton(
                                 key: const ValueKey('photo-continue'),
-                                label: busy
-                                    ? '…'
-                                    : english
-                                    ? '✓ Continue'
-                                    : '✓ Continuer',
+                                label: english ? '✓ Continue' : '✓ Continuer',
                                 onPressed: busy || !valid ? null : next,
                               ),
                             ),

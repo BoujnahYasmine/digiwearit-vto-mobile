@@ -373,7 +373,7 @@ class FaceSmoothing {
   /// Takes the photo and prepares the review photo with the beauty look:
   /// one orientation pass, face detection, one GPU retouch, one final pass.
   /// [onShot] fires as soon as the shutter has fired.
-  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) async {
+  Future<ProcessedCapture> captureForReview({ShotCallback? onShot}) async {
     final camera = _camera;
     if (camera == null || !_enabled) throw StateError('Filter unavailable');
     _enabled = false;
@@ -381,11 +381,10 @@ class FaceSmoothing {
     _clear();
     await _stopStream(camera);
     final file = await camera.takePicture();
-    onShot?.call();
-    final bytes = await compute(prepareStill, (
-      bytes: await file.readAsBytes(),
-      flip: stillIsMirrored(camera.description),
-    ));
+    final raw = await file.readAsBytes();
+    final mirrored = stillIsMirrored(camera.description);
+    onShot?.call(raw, mirrored);
+    final bytes = await compute(prepareStill, (bytes: raw, flip: mirrored));
     final directory = await Directory.systemTemp.createTemp('digiwearit-face-');
     Path? mask;
     MakeupShapes? makeup;

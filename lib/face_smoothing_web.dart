@@ -41,9 +41,9 @@ class FaceSmoothing {
 
   Future<Uint8List> capture() async => (await _capture().toDart).toDart;
 
-  Future<ProcessedCapture> captureForReview({VoidCallback? onShot}) async {
+  Future<ProcessedCapture> captureForReview({ShotCallback? onShot}) async {
     final bytes = await capture();
-    onShot?.call();
+    onShot?.call(bytes, false);
     return processStill(bytes, null, eclat: true);
   }
 }

@@ -91,11 +91,11 @@ class CameraService {
   Future<ProcessedCapture> captureForReview(
     CameraController controller, {
     required bool eclat,
-    VoidCallback? onShot,
+    ShotCallback? onShot,
   }) async {
     final file = await capture(controller);
-    onShot?.call();
     final raw = await file.readAsBytes();
+    onShot?.call(raw, stillIsMirrored(controller.description));
     return processStill(raw, controller.description, eclat: eclat);
   }
 }
